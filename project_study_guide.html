@@ -1,0 +1,2238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeInsight AI · Complete Project Study Guide</title>
+<meta name="description" content="End-to-end study guide for the CodeInsight AI copilot project — architecture, services, data models, auth, RAG pipeline, embeddings, and more.">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0b0d13;
+  --bg2:      #111420;
+  --bg3:      #181c2a;
+  --border:   #1e2338;
+  --border2:  #252c45;
+  --accent:   #7c6af7;
+  --accent2:  #5a49d6;
+  --accent-bg: rgba(124,106,247,0.08);
+  --accent-bg2: rgba(124,106,247,0.15);
+  --green:    #34d399;
+  --green-bg: rgba(52,211,153,0.08);
+  --amber:    #fbbf24;
+  --amber-bg: rgba(251,191,36,0.08);
+  --red:      #f87171;
+  --red-bg:   rgba(248,113,113,0.08);
+  --blue:     #60a5fa;
+  --blue-bg:  rgba(96,165,250,0.08);
+  --pink:     #f472b6;
+  --pink-bg:  rgba(244,114,182,0.08);
+  --text:     #e2e8f0;
+  --text2:    #94a3b8;
+  --text3:    #4a5568;
+  --code-bg:  #070911;
+  --radius:   10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ── Layout ── */
+.shell { display: flex; min-height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 270px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  padding: 1.5rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
+}
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-bg2);
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1px solid rgba(124,106,247,0.3);
+  margin-bottom: 10px;
+  letter-spacing: .06em;
+}
+.brand-badge::before { content: '◆'; font-size: 7px; }
+.brand-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+.brand-title span { color: var(--accent); }
+.brand-sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sidebar-nav { padding: 0.75rem 0; flex: 1; }
+
+.nav-group { margin-bottom: 0.25rem; }
+.nav-section {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--text3);
+  text-transform: uppercase;
+  padding: 10px 1.25rem 4px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 1.25rem;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all .15s;
+  border-left: 2px solid transparent;
+  text-decoration: none;
+}
+.nav-item:hover { color: var(--text); background: var(--bg3); }
+.nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-bg); }
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  background: var(--bg3);
+  flex-shrink: 0;
+}
+.nav-item.active .nav-icon { background: var(--accent-bg2); }
+
+.sidebar-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.progress-bar-wrap { background: var(--bg3); border-radius: 4px; height: 5px; margin-top: 8px; }
+.progress-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--pink)); width: 7%; transition: width .5s ease; }
+.progress-label { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; display: flex; justify-content: space-between; margin-top: 5px; }
+
+/* ── Main ── */
+.main { flex: 1; min-width: 0; }
+
+/* ── Top bar ── */
+.topbar {
+  padding: 0.9rem 2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: rgba(11,13,19,0.9);
+  backdrop-filter: blur(12px);
+  z-index: 50;
+}
+.topbar-crumb { font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+.topbar-crumb span { color: var(--accent); }
+.topbar-actions { display: flex; gap: 8px; }
+.btn-sm {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.btn-primary:hover { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+/* ── Content ── */
+.content { padding: 2.5rem 2.5rem; max-width: 920px; }
+
+.section { display: none; }
+.section.active { display: block; animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Section headers ── */
+.section-header { margin-bottom: 2rem; }
+.section-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: .1em;
+  margin-bottom: 8px;
+}
+.section-title {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text);
+}
+.section-title em {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  color: var(--accent);
+}
+.section-desc {
+  margin-top: 10px;
+  font-size: 14.5px;
+  color: var(--text2);
+  max-width: 640px;
+  line-height: 1.65;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  transition: border-color .2s;
+}
+.card:hover { border-color: var(--border2); }
+.card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.card-icon {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  background: var(--accent-bg2);
+  flex-shrink: 0;
+}
+
+/* ── Arch diagram ── */
+.arch-diagram {
+  background: var(--code-bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+.arch-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+.arch-box {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.arch-box.client  { background: rgba(96,165,250,.12); border-color: rgba(96,165,250,.3); color: var(--blue); }
+.arch-box.gateway { background: var(--accent-bg2); border-color: rgba(124,106,247,.3); color: var(--accent); }
+.arch-box.service { background: rgba(52,211,153,.10); border-color: rgba(52,211,153,.3); color: var(--green); }
+.arch-box.store   { background: rgba(251,191,36,.10); border-color: rgba(251,191,36,.3); color: var(--amber); }
+.arch-box.llm     { background: rgba(244,114,182,.10); border-color: rgba(244,114,182,.3); color: var(--pink); }
+.arch-arrow {
+  color: var(--text3);
+  font-size: 18px;
+  line-height: 1;
+}
+.arch-sep {
+  border: none;
+  border-top: 1px dashed var(--border2);
+  margin: 10px 0;
+}
+.arch-label {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text3);
+  letter-spacing: .06em;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.arch-services-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+
+/* ── Code blocks ── */
+.code-wrap { margin: 1rem 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border2); }
+.code-header {
+  background: var(--bg3);
+  padding: 7px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.code-lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.code-file {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text3);
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all .12s;
+}
+.copy-btn:hover { color: var(--accent); background: var(--accent-bg); }
+pre {
+  background: var(--code-bg);
+  padding: 1.1rem 1.25rem;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--text);
+  margin: 0;
+}
+code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+
+/* syntax */
+.kw  { color: #a78bfa; }
+.fn  { color: #60a5fa; }
+.st  { color: #34d399; }
+.cm  { color: #374151; font-style: italic; }
+.nb  { color: #fbbf24; }
+.op  { color: #64748b; }
+.ty  { color: #f472b6; }
+.dc  { color: #f97316; }
+
+/* ── Alert boxes ── */
+.alert {
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 1rem 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  border-left: 3px solid;
+}
+.alert-danger  { background: var(--red-bg);   border-color: var(--red);    color: #fca5a5; }
+.alert-warning { background: var(--amber-bg); border-color: var(--amber);  color: #fde68a; }
+.alert-tip     { background: var(--green-bg); border-color: var(--green);  color: #6ee7b7; }
+.alert-info    { background: var(--blue-bg);  border-color: var(--blue);   color: #bfdbfe; }
+.alert-accent  { background: var(--accent-bg2); border-color: var(--accent); color: #c4b5fd; }
+.alert strong  { display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; opacity: .7; }
+
+/* ── Tables ── */
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; margin: 1rem 0;
+}
+th {
+  background: var(--bg3);
+  color: var(--text2);
+  font-weight: 600;
+  text-align: left;
+  padding: 9px 13px;
+  font-size: 11px;
+  letter-spacing: .04em;
+  border-bottom: 1px solid var(--border2);
+  text-transform: uppercase;
+}
+td {
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: top;
+}
+td:first-child { color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg3); }
+
+/* ── Flow steps ── */
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 1rem 0;
+}
+.flow-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.flow-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+.flow-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+.flow-connector {
+  width: 2px;
+  flex: 1;
+  min-height: 16px;
+  background: var(--border2);
+  margin: 2px 0;
+}
+.flow-content {
+  padding-bottom: 16px;
+  flex: 1;
+}
+.flow-step:last-child .flow-connector { display: none; }
+.flow-step:last-child .flow-content { padding-bottom: 0; }
+.flow-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-bottom: 5px;
+  letter-spacing: .04em;
+}
+.flow-tag.client  { background: var(--blue-bg);   color: var(--blue);   border: 1px solid rgba(96,165,250,.2); }
+.flow-tag.server  { background: var(--accent-bg2); color: var(--accent); border: 1px solid rgba(124,106,247,.2); }
+.flow-tag.python  { background: var(--green-bg);   color: var(--green);  border: 1px solid rgba(52,211,153,.2); }
+.flow-tag.db      { background: var(--amber-bg);   color: var(--amber);  border: 1px solid rgba(251,191,36,.2); }
+.flow-tag.llm     { background: var(--pink-bg);    color: var(--pink);   border: 1px solid rgba(244,114,182,.2); }
+.flow-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.flow-desc  { font-size: 13px; color: var(--text2); margin-top: 3px; line-height: 1.6; }
+
+/* ── Service ports table ── */
+.port-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--blue);
+}
+
+/* ── Checklist ── */
+.checklist { list-style: none; }
+.checklist li {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 6px 0; font-size: 13.5px; color: var(--text2);
+  border-bottom: 1px solid var(--border);
+}
+.checklist li:last-child { border-bottom: none; }
+.check-icon { color: var(--green); margin-top: 3px; flex-shrink: 0; font-size: 12px; }
+.check-icon.x { color: var(--red); }
+.check-icon.warn { color: var(--amber); }
+
+/* ── QA ── */
+.qa-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.qa-q {
+  padding: 11px 15px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg2);
+  transition: background .12s;
+  color: var(--text);
+}
+.qa-q:hover { background: var(--bg3); }
+.qa-arrow { color: var(--text3); font-size: 12px; transition: transform .2s; }
+.qa-item.open .qa-arrow { transform: rotate(90deg); }
+.qa-a {
+  display: none;
+  padding: 13px 15px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.65;
+  background: var(--code-bg);
+  border-top: 1px solid var(--border);
+}
+.qa-item.open .qa-a { display: block; }
+
+/* ── Cheat grid ── */
+.cheat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cheat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+}
+.cheat-card h4 { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 9px; }
+.cheat-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.cheat-row:last-child { border-bottom: none; }
+.cheat-key { font-family: 'JetBrains Mono', monospace; color: var(--blue); font-size: 11px; }
+.cheat-val { color: var(--text2); font-size: 11px; text-align: right; }
+
+/* ── Service grid ── */
+.service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1rem 0; }
+.service-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.1rem;
+  transition: border-color .2s, transform .15s;
+}
+.service-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.service-header { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.service-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: .05em;
+}
+.svc-parser { background: rgba(52,211,153,.12); color: var(--green); }
+.svc-embed  { background: rgba(96,165,250,.12); color: var(--blue); }
+.svc-rag    { background: rgba(124,106,247,.15); color: var(--accent); }
+.svc-doc    { background: rgba(251,191,36,.12); color: var(--amber); }
+.svc-analysis { background: rgba(244,114,182,.12); color: var(--pink); }
+.svc-minigpt  { background: rgba(248,113,113,.12); color: var(--red); }
+.service-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.service-desc { font-size: 12px; color: var(--text2); line-height: 1.55; }
+.service-port { margin-top: 8px; }
+
+/* ── Inline ── */
+p code, li code, td code {
+  background: var(--bg3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--accent);
+  border: 1px solid var(--border2);
+}
+
+p { margin-bottom: 0.75rem; color: var(--text2); font-size: 14px; }
+h3 { font-size: 17px; font-weight: 700; color: var(--text); margin: 1.5rem 0 0.75rem; }
+h4 { font-size: 14px; font-weight: 600; color: var(--text2); margin: 1.25rem 0 0.5rem; }
+ul, ol { padding-left: 1.25rem; color: var(--text2); font-size: 14px; }
+li { margin-bottom: 4px; line-height: 1.65; }
+strong { color: var(--text); font-weight: 600; }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+/* ── Tag pills ── */
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 20px; border: 1px solid var(--border2); color: var(--text3); font-family: 'JetBrains Mono', monospace; display: inline-block; }
+
+/* ── Code Explanations ── */
+.code-explain {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 13px;
+}
+.code-explain h4 {
+  margin-top: 0;
+  color: var(--accent);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 0.6rem;
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.code-explain ul {
+  padding-left: 1.2rem;
+  list-style-type: disc;
+}
+.code-explain li {
+  margin-bottom: 8px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+.code-explain li:last-child {
+  margin-bottom: 0;
+}
+.code-explain strong {
+  color: var(--text);
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .content { padding: 1.5rem 1rem; }
+  .service-grid, .cheat-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ── SIDEBAR ── -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-badge">CODEINSIGHT AI</div>
+    <div class="brand-title">Project <span>Study Guide</span></div>
+    <div class="brand-sub">End-to-end deep dive</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Overview</div>
+    <a class="nav-item active" onclick="show('overview')"><div class="nav-icon">🏠</div>What is This Project</a>
+    <a class="nav-item" onclick="show('architecture')"><div class="nav-icon">🏗</div>Architecture</a>
+
+    <div class="nav-section">Stack</div>
+    <a class="nav-item" onclick="show('frontend')"><div class="nav-icon">⚛</div>Frontend (React + TS)</a>
+    <a class="nav-item" onclick="show('gateway')"><div class="nav-icon">🔀</div>API Gateway (Node)</a>
+    <a class="nav-item" onclick="show('datamodels')"><div class="nav-icon">🗄</div>Data Models (MongoDB)</a>
+
+    <div class="nav-section">Python Microservices</div>
+    <a class="nav-item" onclick="show('parser')"><div class="nav-icon">🔍</div>Repo Parser Service</a>
+    <a class="nav-item" onclick="show('embedding')"><div class="nav-icon">🧠</div>Embedding Service</a>
+    <a class="nav-item" onclick="show('rag')"><div class="nav-icon">💬</div>RAG Chat Service</a>
+    <a class="nav-item" onclick="show('docservice')"><div class="nav-icon">📄</div>Documentation Service</a>
+    <a class="nav-item" onclick="show('analysis')"><div class="nav-icon">📊</div>Analysis Service</a>
+
+    <div class="nav-section">Shared Layer</div>
+    <a class="nav-item" onclick="show('common')"><div class="nav-icon">🔧</div>Common Module</a>
+    <a class="nav-item" onclick="show('vectorstore')"><div class="nav-icon">🔵</div>ChromaDB Vector Store</a>
+    <a class="nav-item" onclick="show('llmproviders')"><div class="nav-icon">🤖</div>LLM Providers</a>
+
+    <div class="nav-section">Flows</div>
+    <a class="nav-item" onclick="show('uploadflow')"><div class="nav-icon">📤</div>Repo Upload Flow</a>
+    <a class="nav-item" onclick="show('ragflow')"><div class="nav-icon">🔄</div>RAG Chat Flow</a>
+    <a class="nav-item" onclick="show('authflow')"><div class="nav-icon">🔐</div>Auth & JWT</a>
+
+    <div class="nav-section">Infra & Ops</div>
+    <a class="nav-item" onclick="show('docker')"><div class="nav-icon">🐳</div>Docker & Services</a>
+    <a class="nav-item" onclick="show('env')"><div class="nav-icon">⚙</div>Config & .env</a>
+
+    <div class="nav-section">Study</div>
+    <a class="nav-item" onclick="show('qa')"><div class="nav-icon">❓</div>Interview Q&A</a>
+    <a class="nav-item" onclick="show('cheatsheet')"><div class="nav-icon">📋</div>Cheat Sheet</a>
+  </div>
+  <div class="sidebar-footer">
+    <div style="font-size:11px;color:var(--text3)">Study progress</div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+    <div class="progress-label"><span id="progress-label">0 / 18 sections</span><span id="progress-pct">0%</span></div>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-crumb">CodeInsight AI › <span id="crumb-title">What is This Project</span></div>
+    <div class="topbar-actions">
+      <button class="btn-sm" onclick="prevSection()">← Prev</button>
+      <button class="btn-sm btn-primary" onclick="nextSection()">Next →</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══════════════ OVERVIEW ══════════════ -->
+    <div class="section active" id="sec-overview">
+      <div class="section-header">
+        <div class="section-num">PROJECT OVERVIEW</div>
+        <div class="section-title">What is <em>CodeInsight AI</em>?</div>
+        <div class="section-desc">A full-stack, production-grade AI developer copilot that lets you upload any GitHub repo or ZIP, semantically parse it, embed the code into a vector store, and then chat with the codebase using RAG + LLMs.</div>
+      </div>
+
+      <div class="alert alert-accent">
+        <strong>🎯 Core Idea</strong>
+        You give it a repository. It parses every file, extracts symbols &amp; dependencies, creates vector embeddings, stores them in ChromaDB, and then you can ask natural-language questions like <em>"How does authentication work?"</em> — the system retrieves the right code chunks and streams an LLM answer with file citations.
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">📦</div>Tech Stack at a Glance</div>
+        <table>
+          <tr><th>Layer</th><th>Technology</th><th>What it does</th></tr>
+          <tr><td>Frontend</td><td>React 18 + TypeScript + Vite</td><td>UI, chat, Monaco editor, React Flow graph</td></tr>
+          <tr><td>State</td><td>Redux Toolkit + React Query</td><td>Global state + server data caching</td></tr>
+          <tr><td>Styling</td><td>TailwindCSS + Framer Motion</td><td>Utility classes + animations</td></tr>
+          <tr><td>API Gateway</td><td>Node.js + Express + TypeScript</td><td>Auth, routing, proxies to Python services</td></tr>
+          <tr><td>Database</td><td>MongoDB + Mongoose</td><td>Users, repos, chats persisted</td></tr>
+          <tr><td>Microservices</td><td>FastAPI (Python)</td><td>Parser, Embedder, RAG, Docs, Analysis</td></tr>
+          <tr><td>Vector Store</td><td>ChromaDB</td><td>Semantic search over code chunks</td></tr>
+          <tr><td>Embeddings</td><td>sentence-transformers / CodeBERT</td><td>Dense vector representation of code</td></tr>
+          <tr><td>LLMs</td><td>Groq / Gemini / OpenRouter</td><td>Streaming completions for RAG answers</td></tr>
+          <tr><td>Infra</td><td>Docker Compose</td><td>One-command local stack</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🎯</div>Phase Scoping</div>
+        <table>
+          <tr><th>Phase</th><th>What's In</th><th>Status</th></tr>
+          <tr><td>Phase 1</td><td>Full RAG copilot — upload, parse, embed, chat, docs, architecture viz</td><td><span style="color:var(--green)">✓ Active</span></td></tr>
+          <tr><td>Phase 2</td><td>MiniGPT educational transformer lab (separate from production copilot)</td><td><span style="color:var(--amber)">Deferred</span></td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">📁</div>Repository Layout</div>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">Folder Structure</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <pre>AIinsight_copilot_/
+├── client/              <span class="cm"># React + Vite frontend</span>
+│   └── src/
+│       ├── App.tsx
+│       ├── features/    <span class="cm"># auth, repositories, workspace</span>
+│       ├── components/
+│       ├── app/         <span class="cm"># Redux store</span>
+│       └── types.ts
+│
+├── server/              <span class="cm"># Node.js Express API gateway</span>
+│   └── src/
+│       ├── app.ts
+│       ├── models.ts    <span class="cm"># Mongoose schemas</span>
+│       ├── routes/      <span class="cm"># auth.ts, repositories.ts, minigpt.ts</span>
+│       ├── middleware/
+│       └── services/
+│
+├── services/            <span class="cm"># Python FastAPI microservices</span>
+│   ├── common/          <span class="cm"># shared: embeddings, llm, vector_store, models</span>
+│   ├── repository-parser-service/
+│   ├── embedding-service/
+│   ├── rag-service/
+│   ├── documentation-service/
+│   ├── analysis-service/
+│   └── minigpt-service/
+│
+├── docker-compose.yml
+├── .env / .env.example
+└── package.json         <span class="cm"># workspace root</span></pre>
+        </div>
+        <div class="code-explain">
+          <h4>📁 Reference: Workspace Directory Layout</h4>
+          <ul>
+            <li>Visualizes the repository's logical layout, pointing out the <code>client/</code> (React frontend workspace), <code>server/</code> (Express gateway server), and <code>services/</code> (Python FastAPI microservices and shared <code>common/</code> directory) directories.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ARCHITECTURE ══════════════ -->
+    <div class="section" id="sec-architecture">
+      <div class="section-header">
+        <div class="section-num">ARCHITECTURE</div>
+        <div class="section-title">System <em>Architecture</em></div>
+        <div class="section-desc">Microservices-first design. Each Python service is independent, communicates over HTTP, and shares a common library for embeddings, LLM, and ChromaDB access.</div>
+      </div>
+
+      <div class="arch-diagram">
+        <div class="arch-label">USER BROWSER</div>
+        <div class="arch-row">
+          <div class="arch-box client">React Client :5173</div>
+        </div>
+        <div class="arch-row"><div class="arch-arrow">↕</div></div>
+        <div class="arch-label">API GATEWAY</div>
+        <div class="arch-row">
+          <div class="arch-box gateway">Node/Express :8080</div>
+        </div>
+        <div class="arch-sep"></div>
+        <div class="arch-label">PYTHON MICROSERVICES (FastAPI)</div>
+        <div class="arch-services-row">
+          <div class="arch-box service">Parser :8101</div>
+          <div class="arch-box service">Embedder :8102</div>
+          <div class="arch-box service">RAG :8103</div>
+          <div class="arch-box service">Docs :8104</div>
+          <div class="arch-box service">Analysis :8105</div>
+          <div class="arch-box service">MiniGPT :8106</div>
+        </div>
+        <div class="arch-sep"></div>
+        <div class="arch-label">PERSISTENCE</div>
+        <div class="arch-services-row">
+          <div class="arch-box store">MongoDB :27017</div>
+          <div class="arch-box store">ChromaDB :8000</div>
+        </div>
+        <div class="arch-sep"></div>
+        <div class="arch-label">EXTERNAL LLMs</div>
+        <div class="arch-services-row">
+          <div class="arch-box llm">Groq API</div>
+          <div class="arch-box llm">Gemini API</div>
+          <div class="arch-box llm">OpenRouter</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">📡</div>Service Ports Reference</div>
+        <table>
+          <tr><th>Service</th><th>Port</th><th>Language</th><th>Responsibility</th></tr>
+          <tr><td>React Client</td><td><span class="port-badge">5173</span></td><td>TypeScript</td><td>Web UI — chat, viz, upload</td></tr>
+          <tr><td>Node API Gateway</td><td><span class="port-badge">8080</span></td><td>TypeScript</td><td>Auth, routing, MongoDB access</td></tr>
+          <tr><td>ChromaDB</td><td><span class="port-badge">8000</span></td><td>Go/Python</td><td>Vector search database</td></tr>
+          <tr><td>Repository Parser</td><td><span class="port-badge">8101</span></td><td>Python</td><td>Parses files → chunks + symbols</td></tr>
+          <tr><td>Embedding Service</td><td><span class="port-badge">8102</span></td><td>Python</td><td>Embeds chunks → indexes in Chroma</td></tr>
+          <tr><td>RAG Service</td><td><span class="port-badge">8103</span></td><td>Python</td><td>Retrieves chunks → streams LLM answer</td></tr>
+          <tr><td>Documentation Service</td><td><span class="port-badge">8104</span></td><td>Python</td><td>Generates README/API/module docs via LLM</td></tr>
+          <tr><td>Analysis Service</td><td><span class="port-badge">8105</span></td><td>Python</td><td>React Flow graph + code explanations</td></tr>
+          <tr><td>MiniGPT Service</td><td><span class="port-badge">8106</span></td><td>Python</td><td>Phase 2 transformer lab (deferred)</td></tr>
+          <tr><td>MongoDB</td><td><span class="port-badge">27017</span></td><td>—</td><td>Users, repos, chats stored</td></tr>
+        </table>
+      </div>
+
+      <div class="alert alert-tip">
+        <strong>💡 Key Design Decision</strong>
+        All Python services share a <code>common/</code> library mounted via Docker volumes and <code>PYTHONPATH</code>. This means <code>embed_texts()</code>, <code>stream_complete()</code>, <code>query_chunks()</code> are written once and reused across all services — zero duplication.
+      </div>
+    </div>
+
+    <!-- ══════════════ FRONTEND ══════════════ -->
+    <div class="section" id="sec-frontend">
+      <div class="section-header">
+        <div class="section-num">LAYER 1 — CLIENT</div>
+        <div class="section-title">Frontend <em>React + TypeScript</em></div>
+        <div class="section-desc">Built with Vite, React 18, Redux Toolkit, React Query, TailwindCSS, Framer Motion, Monaco Editor, and React Flow. Single-page app.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">📁</div>client/src/ structure</div>
+        <table>
+          <tr><th>File/Folder</th><th>What it is</th></tr>
+          <tr><td>App.tsx</td><td>Root component — routing, auth guards, layout</td></tr>
+          <tr><td>main.tsx</td><td>ReactDOM entry point, Redux Provider setup</td></tr>
+          <tr><td>features/auth/</td><td>Login, signup forms, auth Redux slice</td></tr>
+          <tr><td>features/repositories/</td><td>Upload UI, repo list, status polling</td></tr>
+          <tr><td>features/workspace/</td><td>Chat panel, Monaco code viewer, React Flow arch graph, doc viewer</td></tr>
+          <tr><td>app/</td><td>Redux store configuration</td></tr>
+          <tr><td>components/</td><td>Reusable UI components (buttons, modals, etc.)</td></tr>
+          <tr><td>types.ts</td><td>Shared TypeScript types for API shapes</td></tr>
+          <tr><td>styles.css</td><td>Global base CSS + Tailwind directives</td></tr>
+          <tr><td>vite.config.ts</td><td>Vite proxy config (dev: /api → :8080)</td></tr>
+        </table>
+      </div>
+
+      <h3>Key Libraries & Why</h3>
+      <table>
+        <tr><th>Library</th><th>Used For</th></tr>
+        <tr><td>Redux Toolkit</td><td>Auth state (user, JWT token), global app state</td></tr>
+        <tr><td>React Query (TanStack)</td><td>Server-side data fetching, caching, background refetching (repo list, chat history)</td></tr>
+        <tr><td>Monaco Editor</td><td>VS Code-style syntax-highlighted code viewer for file contents</td></tr>
+        <tr><td>React Flow</td><td>Interactive node-graph for architecture visualization (dependency edges)</td></tr>
+        <tr><td>Framer Motion</td><td>Smooth UI animations (slide-in, fade, loading states)</td></tr>
+        <tr><td>TailwindCSS</td><td>Utility-first styling — rapid layout/color/spacing</td></tr>
+      </table>
+
+      <div class="alert alert-info">
+        <strong>📡 SSE Streaming</strong>
+        The chat feature uses the browser's <code>EventSource</code> / <code>fetch</code> with <code>ReadableStream</code> to consume Server-Sent Events from the RAG service. Tokens appear word-by-word, exactly like ChatGPT's streaming UX.
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">TypeScript</span><span class="code-file">types.ts</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="cm">// Shared types sent between API Gateway and Client</span>
+<span class="kw">export interface</span> <span class="ty">Repository</span> {
+  _id: <span class="ty">string</span>;
+  name: <span class="ty">string</span>;
+  sourceType: <span class="st">'github'</span> | <span class="st">'zip'</span>;
+  sourceUrl?: <span class="ty">string</span>;
+  status: <span class="st">'queued'</span> | <span class="st">'parsing'</span> | <span class="st">'embedding'</span> | <span class="st">'ready'</span> | <span class="st">'failed'</span>;
+  lastError?: <span class="ty">string</span>;
+  createdAt: <span class="ty">string</span>;
+}
+
+<span class="kw">export interface</span> <span class="ty">ChatMessage</span> {
+  role: <span class="st">'user'</span> | <span class="st">'assistant'</span> | <span class="st">'system'</span>;
+  content: <span class="ty">string</span>;
+  citations?: { filePath: <span class="ty">string</span>; startLine: <span class="ty">number</span>; endLine: <span class="ty">number</span> }[];
+}</pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: types.ts</h4>
+        <ul>
+          <li><strong>export interface Repository:</strong> This interface mirrors the database document structure for repository metadata managed by the MongoDB store and passed to the frontend.
+            <ul>
+              <li><code>_id: string;</code> represents the unique identifier auto-generated by MongoDB (ObjectId serialization).</li>
+              <li><code>name: string;</code> corresponds to the directory or repository name.</li>
+              <li><code>sourceType: 'github' | 'zip';</code> is a union type that dictates whether the source was fetched from a remote Git URL or uploaded as a compressed archive.</li>
+              <li><code>sourceUrl?: string;</code> is an optional property holding the Git clone link (only populated when <code>sourceType</code> is <code>'github'</code>).</li>
+              <li><code>status: 'queued' | 'parsing' | 'embedding' | 'ready' | 'failed';</code> acts as a strict finite state machine tracker, letting the client poll and change views depending on the pipeline's progress.</li>
+              <li><code>lastError?: string;</code> stores the error log if the status transitions to <code>'failed'</code>.</li>
+              <li><code>createdAt: string;</code> keeps a ISO timestamp of record insertion.</li>
+            </ul>
+          </li>
+          <li><strong>export interface ChatMessage:</strong> Dictates the structural contract of conversation logs.
+            <ul>
+              <li><code>role: 'user' | 'assistant' | 'system';</code> enforces role-based message origin matching standard LLM API payloads (e.g. OpenAI/Anthropic/Gemini specification).</li>
+              <li><code>content: string;</code> stores the raw textual narrative or markdown response generated.</li>
+              <li><code>citations?: { filePath: string; startLine: number; endLine: number }[];</code> is an optional array of references returned during semantic retrieval (RAG) indicating which files, start lines, and end lines were analyzed to construct the answer.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════════════ GATEWAY ══════════════ -->
+    <div class="section" id="sec-gateway">
+      <div class="section-header">
+        <div class="section-num">LAYER 2 — API GATEWAY</div>
+        <div class="section-title">Node.js <em>API Gateway</em></div>
+        <div class="section-desc">Express server that handles authentication (JWT), stores data in MongoDB, and proxies requests to the Python microservices. It's the single entry point for the React client.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">📁</div>server/src/ structure</div>
+        <table>
+          <tr><th>File</th><th>What it does</th></tr>
+          <tr><td>app.ts</td><td>Creates Express app, applies middleware (CORS, JSON parsing, auth), mounts routes</td></tr>
+          <tr><td>index.ts</td><td>Starts HTTP server, connects to MongoDB via Mongoose</td></tr>
+          <tr><td>models.ts</td><td>Mongoose schemas: User, Repository, Chat</td></tr>
+          <tr><td>routes/auth.ts</td><td>POST /api/auth/register, POST /api/auth/login → returns JWT</td></tr>
+          <tr><td>routes/repositories.ts</td><td>CRUD for repos + triggers parsing/embedding + chat endpoints</td></tr>
+          <tr><td>routes/minigpt.ts</td><td>Phase 2 proxy to MiniGPT service</td></tr>
+          <tr><td>middleware/</td><td>JWT auth middleware applied to protected routes</td></tr>
+          <tr><td>services/</td><td>HTTP client helpers to call Python services</td></tr>
+          <tr><td>config/</td><td>Environment variable access (PORT, JWT_SECRET, service URLs)</td></tr>
+        </table>
+      </div>
+
+      <h3>Repository Status State Machine</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag client">CLIENT</span>
+            <div class="flow-title">Upload GitHub URL or ZIP file</div>
+            <div class="flow-desc">POST /api/repositories — gateway saves record with <code>status: "queued"</code> in MongoDB</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag server">GATEWAY</span>
+            <div class="flow-title">status → "parsing"</div>
+            <div class="flow-desc">Gateway calls Parser Service (port 8101). Status updated in MongoDB immediately.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">PARSER</span>
+            <div class="flow-title">Returns RepositoryAnalysis</div>
+            <div class="flow-desc">Chunks, symbols, imports, dependency edges extracted from all files</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag server">GATEWAY</span>
+            <div class="flow-title">status → "embedding"</div>
+            <div class="flow-desc">Gateway calls Embedding Service with the full analysis payload</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag db">CHROMA</span>
+            <div class="flow-title">Vectors indexed in ChromaDB</div>
+            <div class="flow-desc">Each chunk embedded → upserted into collection keyed by repository_id</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag server">GATEWAY</span>
+            <div class="flow-title">status → "ready"</div>
+            <div class="flow-desc">MongoDB updated. Client polls GET /api/repositories/:id until status is "ready". Chat is now unlocked.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">TypeScript</span><span class="code-file">server/src/routes/auth.ts (pattern)</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="cm">// JWT-based auth — register creates user, login returns signed token</span>
+router.post(<span class="st">'/register'</span>, <span class="kw">async</span> (req, res) => {
+  <span class="kw">const</span> hash = <span class="kw">await</span> <span class="fn">bcrypt.hash</span>(req.body.password, <span class="nb">10</span>);
+  <span class="kw">const</span> user = <span class="kw">await</span> <span class="ty">User</span>.<span class="fn">create</span>({ email, name, passwordHash: hash });
+  res.<span class="fn">json</span>({ token: <span class="fn">jwt.sign</span>({ sub: user._id }, JWT_SECRET) });
+});
+
+router.post(<span class="st">'/login'</span>, <span class="kw">async</span> (req, res) => {
+  <span class="kw">const</span> user = <span class="kw">await</span> <span class="ty">User</span>.<span class="fn">findOne</span>({ email });
+  <span class="kw">const</span> ok = <span class="kw">await</span> <span class="fn">bcrypt.compare</span>(password, user.passwordHash);
+  <span class="kw">if</span> (!ok) <span class="kw">return</span> res.<span class="fn">status</span>(<span class="nb">401</span>).<span class="fn">json</span>({ error: <span class="st">'Invalid credentials'</span> });
+  res.<span class="fn">json</span>({ token: <span class="fn">jwt.sign</span>({ sub: user._id }, JWT_SECRET, { expiresIn: <span class="st">'7d'</span> }) });
+});</pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: auth.ts (pattern)</h4>
+        <ul>
+          <li><strong>POST /register:</strong> Securely inserts new user accounts into the database.
+            <ul>
+              <li><code>bcrypt.hash(req.body.password, 10):</code> Asynchronously computes a salted bcrypt hash of the user's plaintext password. The salt work factor (or rounds) is set to 10. Salting makes the hash unique even for identical passwords, neutralizing rainbow table attacks.</li>
+              <li><code>User.create({ email, name, passwordHash: hash }):</code> Mongoose query that creates and persists a user record with the hashed credentials. Plaintext passwords are never stored in the database.</li>
+              <li><code>jwt.sign({ sub: user._id }, JWT_SECRET):</code> Generates a stateless JSON Web Token containing the user's document ID as the subject (<code>sub</code>). The signature is encrypted using the <code>JWT_SECRET</code> environment variable to ensure it cannot be spoofed or altered by the client.</li>
+            </ul>
+          </li>
+          <li><strong>POST /login:</strong> Authenticates returning users and returns an authorization token.
+            <ul>
+              <li><code>User.findOne({ email }):</code> Checks the MongoDB database for a document matching the input email address.</li>
+              <li><code>bcrypt.compare(password, user.passwordHash):</code> Cryptographically compares the incoming plaintext password against the stored bcrypt hash. This function extracts the salt from the stored hash string and hashes the input password with it to see if the resulting strings match.</li>
+              <li><code>if (!ok) return res.status(401):</code> Returns an HTTP 401 Unauthorized status code if password validation fails.</li>
+              <li><code>jwt.sign(..., { expiresIn: '7d' }):</code> If credentials match, generates a JWT configured with a 7-day expiration (<code>expiresIn: '7d'</code>). This enforces session expiration and limits risk if a token is intercepted.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════════════ DATA MODELS ══════════════ -->
+    <div class="section" id="sec-datamodels">
+      <div class="section-header">
+        <div class="section-num">LAYER 3 — DATABASE</div>
+        <div class="section-title">Data <em>Models</em> (MongoDB)</div>
+        <div class="section-desc">Three Mongoose schemas defined in server/src/models.ts. MongoDB stores users, repo metadata, and chat history. Actual code vectors go to ChromaDB.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">👤</div>User Schema</div>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>email</td><td>String</td><td>Unique, lowercase, indexed</td></tr>
+          <tr><td>name</td><td>String</td><td>Display name</td></tr>
+          <tr><td>passwordHash</td><td>String</td><td>bcrypt hashed — never store plaintext</td></tr>
+          <tr><td>createdAt</td><td>Date</td><td>Auto from timestamps: true</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">📦</div>Repository Schema</div>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>ownerId</td><td>ObjectId → User</td><td>Indexed foreign key</td></tr>
+          <tr><td>name</td><td>String</td><td>Repo name</td></tr>
+          <tr><td>sourceType</td><td>'github' | 'zip'</td><td>Upload origin</td></tr>
+          <tr><td>sourceUrl</td><td>String?</td><td>GitHub URL if applicable</td></tr>
+          <tr><td>status</td><td>queued → parsing → embedding → ready | failed</td><td>State machine field</td></tr>
+          <tr><td>lastError</td><td>String?</td><td>Error message if status=failed</td></tr>
+          <tr><td>analysis</td><td>Mixed</td><td>Stores the RepositoryAnalysis from parser</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">💬</div>Chat + ChatMessage Schema</div>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>ownerId</td><td>ObjectId → User</td><td>Who owns this chat</td></tr>
+          <tr><td>repositoryId</td><td>ObjectId → Repository</td><td>Which repo is being chatted about</td></tr>
+          <tr><td>title</td><td>String</td><td>Default "Repository chat"</td></tr>
+          <tr><td>messages[].role</td><td>'user' | 'assistant' | 'system'</td><td>Standard chat roles</td></tr>
+          <tr><td>messages[].content</td><td>String</td><td>Message text</td></tr>
+          <tr><td>messages[].citations</td><td>[{filePath, startLine, endLine}]</td><td>Code location references from RAG</td></tr>
+        </table>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">TypeScript</span><span class="code-file">server/src/models.ts</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="kw">type</span> <span class="ty">RepositoryStatus</span> = <span class="st">"queued"</span> | <span class="st">"parsing"</span> | <span class="st">"embedding"</span> | <span class="st">"ready"</span> | <span class="st">"failed"</span>;
+
+<span class="kw">const</span> chatMessageSchema = <span class="kw">new</span> <span class="fn">Schema</span>({
+  role:     { type: <span class="ty">String</span>, enum: [<span class="st">"user"</span>, <span class="st">"assistant"</span>, <span class="st">"system"</span>], required: <span class="nb">true</span> },
+  content:  { type: <span class="ty">String</span>, required: <span class="nb">true</span> },
+  citations: [{ filePath: <span class="ty">String</span>, startLine: <span class="ty">Number</span>, endLine: <span class="ty">Number</span> }]
+}, { timestamps: <span class="nb">true</span> });
+
+<span class="kw">export const</span> <span class="ty">Chat</span> = mongoose.<span class="fn">model</span>(<span class="st">"Chat"</span>, chatSchema);
+<span class="kw">export const</span> <span class="ty">Repository</span> = mongoose.<span class="fn">model</span>&lt;<span class="ty">RepositoryDocument</span>&gt;(<span class="st">"Repository"</span>, repositorySchema);
+<span class="kw">export const</span> <span class="ty">User</span> = mongoose.<span class="fn">model</span>&lt;<span class="ty">UserDocument</span>&gt;(<span class="st">"User"</span>, userSchema);</pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: models.ts</h4>
+        <ul>
+          <li><strong>type RepositoryStatus:</strong> A TypeScript string literal union type ensuring type safety when working with repository pipelines. It allows the system to statically check that statuses can only take valid states: <code>"queued"</code>, <code>"parsing"</code>, <code>"embedding"</code>, <code>"ready"</code>, or <code>"failed"</code>.</li>
+          <li><strong>chatMessageSchema:</strong> A sub-document schema nested inside the main Chat schema representing an item in the chat message array.
+            <ul>
+              <li><code>role:</code> Enforces an enumerated string constraint that only accepts <code>"user"</code>, <code>"assistant"</code>, or <code>"system"</code>, matching the standard structural formats expected by modern language model APIs.</li>
+              <li><code>content:</code> String containing the message content. It has <code>required: true</code> to prevent empty messages from polluting database logs.</li>
+              <li><code>citations:</code> An array of sub-documents mapping the specific sections of files retrieved via the vector similarity search that the assistant utilized. This allows the frontend to link directly to source files.</li>
+              <li><code>{ timestamps: true }:</code> A Mongoose option that automatically adds and updates <code>createdAt</code> and <code>updatedAt</code> ISO date fields whenever a new message is appended.</li>
+            </ul>
+          </li>
+          <li><strong>Model Compilation and Export:</strong>
+            <ul>
+              <li><code>Chat:</code> Compiles the Chat schema into a model to execute database actions over the chats collection.</li>
+              <li><code>Repository:</code> Creates a strongly-typed model leveraging TypeScript interfaces (via the generic parameter <code>&lt;RepositoryDocument&gt;</code>) to interact with the repositories collection.</li>
+              <li><code>User:</code> Compiles the User schema into a model, leveraging <code>&lt;UserDocument&gt;</code> generic types to allow strong autocomplete on database documents.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════════════ PARSER SERVICE ══════════════ -->
+    <div class="section" id="sec-parser">
+      <div class="section-header">
+        <div class="section-num">PYTHON SERVICE 1 · PORT 8101</div>
+        <div class="section-title">Repository <em>Parser Service</em></div>
+        <div class="section-desc">Receives a GitHub URL or ZIP archive. Scans every source file, extracts code symbols (functions, classes), import chains, API endpoints, and dependency edges. Returns a structured RepositoryAnalysis.</div>
+      </div>
+
+      <div class="alert alert-info">
+        <strong>📥 Input → Output</strong>
+        Input: GitHub URL or uploaded ZIP. Output: <code>RepositoryAnalysis</code> — a structured object containing files, chunks, symbols, and dependency edges.
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🔍</div>What the Parser Extracts</div>
+        <table>
+          <tr><th>Entity</th><th>What it is</th><th>Example</th></tr>
+          <tr><td>RepositoryFile</td><td>Each source file's path, language, size, content</td><td>src/auth/login.ts, typescript, 2048 bytes</td></tr>
+          <tr><td>CodeChunk</td><td>Meaningful slice of a file (function, class block)</td><td>Lines 10-45 of auth.ts containing the login() function</td></tr>
+          <tr><td>CodeSymbol</td><td>Named declaration inside a chunk</td><td>function login, class UserService, POST /api/login</td></tr>
+          <tr><td>DependencyEdge</td><td>Directional connection between files/symbols</td><td>auth.ts → imports → models.ts (kind: "imports")</td></tr>
+        </table>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python · Pydantic</span><span class="code-file">services/common/models.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+
+<span class="kw">class</span> <span class="ty">CodeSymbol</span>(BaseModel):
+    name: str
+    kind: Literal[<span class="st">"function"</span>, <span class="st">"class"</span>, <span class="st">"method"</span>, <span class="st">"api"</span>, <span class="st">"import"</span>]
+    filePath: str
+    startLine: <span class="fn">int</span>
+    endLine: <span class="fn">int</span>
+    signature: str | <span class="kw">None</span> = <span class="kw">None</span>
+
+<span class="kw">class</span> <span class="ty">CodeChunk</span>(BaseModel):
+    id: str                   <span class="cm"># unique chunk ID</span>
+    repositoryId: str
+    filePath: str
+    language: str
+    startLine: <span class="fn">int</span>
+    endLine: <span class="fn">int</span>
+    content: str              <span class="cm"># actual source code</span>
+    symbol: CodeSymbol | <span class="kw">None</span> = <span class="kw">None</span>
+    imports: list[str] = []   <span class="cm"># import identifiers found in chunk</span>
+
+<span class="kw">class</span> <span class="ty">DependencyEdge</span>(BaseModel):
+    source: str
+    target: str
+    kind: Literal[<span class="st">"imports"</span>, <span class="st">"calls"</span>, <span class="st">"contains"</span>, <span class="st">"api"</span>]
+
+<span class="kw">class</span> <span class="ty">RepositoryAnalysis</span>(BaseModel):
+    repositoryId: str
+    files: list[RepositoryFile]
+    chunks: list[CodeChunk]
+    symbols: list[CodeSymbol]
+    dependencies: list[DependencyEdge]
+    summary: dict</pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: models.py (Pydantic Models)</h4>
+        <ul>
+          <li><strong>BaseModel:</strong> The base class from Pydantic used to construct strongly-typed data validation models. It enforces strict type parsing, validation checks, and exports data shapes seamlessly into standard formats like JSON or dictionaries.</li>
+          <li><strong>CodeSymbol:</strong> Models programmatic declarations extracted from the codebase.
+            <ul>
+              <li><code>name: str;</code> stores the identifier (e.g. <code>"login"</code> or <code>"UserService"</code>).</li>
+              <li><code>kind: Literal[...];</code> restricts the type of symbol using a Python <code>Literal</code> construct, rejecting values outside of functions, classes, methods, endpoints (api), or module imports.</li>
+              <li><code>filePath: str, startLine: int, endLine: int;</code> tracks the code symbol coordinates.</li>
+              <li><code>signature: str | None = None;</code> is an optional field that stores formal signature definitions (such as parameter signatures and returns).</li>
+            </ul>
+          </li>
+          <li><strong>CodeChunk:</strong> Represents a single, coherent segment of a source file suitable for indexing.
+            <ul>
+              <li><code>id: str;</code> contains a unique chunk hash (usually generated from file coordinates and contents).</li>
+              <li><code>content: str;</code> stores the raw code block context itself.</li>
+              <li><code>symbol: CodeSymbol | None = None;</code> links this chunk to a declared symbol if it contains one.</li>
+              <li><code>imports: list[str] = [];</code> stores module imports found inside the chunk, which helps compile dependencies.</li>
+            </ul>
+          </li>
+          <li><strong>DependencyEdge:</strong> Defines a directional relationship between symbols or files.
+            <ul>
+              <li><code>source: str, target: str;</code> represents file links or calls.</li>
+              <li><code>kind: Literal[...];</code> defines the connection type, such as <code>"imports"</code>, <code>"calls"</code> (invocations), <code>"contains"</code> (parent-child blocks), or <code>"api"</code> (endpoint routes).</li>
+            </ul>
+          </li>
+          <li><strong>RepositoryAnalysis:</strong> The root payload representing a parsed repository.
+            <ul>
+              <li><code>files: list[RepositoryFile];</code> lists all file nodes.</li>
+              <li><code>chunks: list[CodeChunk];</code> holds granular code slices that will be vector-indexed.</li>
+              <li><code>symbols: list[CodeSymbol];</code> catalog of all parsed declarations.</li>
+              <li><code>dependencies: list[DependencyEdge];</code> stores the complete graph edge configuration representing dependencies.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="alert alert-tip">
+        <strong>💡 Why chunks and not whole files?</strong>
+        Embedding an entire 2000-line file creates a single noisy vector. A function-level chunk (30–80 lines) creates a precise, semantically meaningful vector — much better retrieval quality.
+      </div>
+    </div>
+
+    <!-- ══════════════ EMBEDDING SERVICE ══════════════ -->
+    <div class="section" id="sec-embedding">
+      <div class="section-header">
+        <div class="section-num">PYTHON SERVICE 2 · PORT 8102</div>
+        <div class="section-title">Embedding <em>Service</em></div>
+        <div class="section-desc">Takes the RepositoryAnalysis from the parser, generates dense vector embeddings for each code chunk using sentence-transformers or CodeBERT, and upserts them into ChromaDB.</div>
+      </div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag server">GATEWAY</span>
+            <div class="flow-title">POST /repositories/{id}/index</div>
+            <div class="flow-desc">Sends full RepositoryAnalysis JSON payload to embedding service</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">EMBEDDING SERVICE</span>
+            <div class="flow-title">Build embedding text per chunk</div>
+            <div class="flow-desc">Constructs a rich text: <code>"file: {path}\nlanguage: {lang}\nsymbol: {name}\n{content}"</code> — context-aware embedding</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">COMMON / embeddings.py</span>
+            <div class="flow-title">embed_texts(texts) → vectors</div>
+            <div class="flow-desc">Uses sentence-transformers model to convert text → float[] vectors. Returns list of dense embeddings.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag db">CHROMADB</span>
+            <div class="flow-title">upsert_chunks() → stored</div>
+            <div class="flow-desc">Chunks + embeddings + metadata (filePath, startLine, endLine) upserted to ChromaDB collection named by repository_id</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python · FastAPI</span><span class="code-file">services/embedding-service/main.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="dc">@app.post</span>(<span class="st">"/repositories/{repository_id}/index"</span>)
+<span class="kw">def</span> <span class="fn">index_repository</span>(repository_id: str, analysis: <span class="ty">RepositoryAnalysis</span>):
+    chunks = [chunk.model_dump() <span class="kw">for</span> chunk <span class="kw">in</span> analysis.chunks]
+    texts  = [<span class="fn">_embedding_text</span>(chunk) <span class="kw">for</span> chunk <span class="kw">in</span> chunks]
+    embeddings = <span class="fn">embed_texts</span>(texts)        <span class="cm"># → list[list[float]]</span>
+    <span class="kw">return</span> <span class="fn">upsert_chunks</span>(repository_id, chunks, embeddings)
+
+<span class="kw">def</span> <span class="fn">_embedding_text</span>(chunk: dict) -> str:
+    symbol = chunk.get(<span class="st">"symbol"</span>) <span class="kw">or</span> {}
+    <span class="kw">return</span> <span class="st">"\n"</span>.join([
+        <span class="st">f"file: {chunk['filePath']}"</span>,
+        <span class="st">f"language: {chunk['language']}"</span>,
+        <span class="st">f"symbol: {symbol.get('name', '')}"</span>,
+        chunk[<span class="st">"content"</span>],
+    ])
+
+<span class="cm"># Semantic search endpoint also available</span>
+<span class="dc">@app.post</span>(<span class="st">"/repositories/{repository_id}/search"</span>)
+<span class="kw">def</span> <span class="fn">semantic_search</span>(repository_id: str, request: <span class="ty">SearchRequest</span>):
+    embedding = <span class="fn">embed_texts</span>([request.query])[<span class="nb">0</span>]
+    results   = <span class="fn">query_chunks</span>(repository_id, embedding, request.limit)
+    <span class="kw">return</span> {<span class="st">"results"</span>: results}</pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: main.py (Embedding Service)</h4>
+        <ul>
+          <li><strong>@app.post("/repositories/{repository_id}/index"):</strong> FastAPI endpoint designated to index parsed chunks of a repository.
+            <ul>
+              <li><code>analysis.chunks:</code> Receives the validation model containing the granular chunks generated by the parser service.</li>
+              <li><code>chunk.model_dump():</code> Serializes each Pydantic chunk object back to a standard Python dictionary to enable dictionary operations.</li>
+              <li><code>_embedding_text(chunk):</code> Prepares the contextual string for each chunk. The string consists of metadata prepended to the actual code block, giving the embedding model semantic cues (e.g. filename, language, symbol name) which significantly improves retrieval accuracy during RAG queries.</li>
+              <li><code>embed_texts(texts):</code> Calls the shared sentence-transformer configuration to output dense vector arrays (floats).</li>
+              <li><code>upsert_chunks(repository_id, chunks, embeddings):</code> Sends the list of serialized chunks and their computed embeddings to the ChromaDB client to index the collection under the repository's database identifier.</li>
+            </ul>
+          </li>
+          <li><strong>_embedding_text(chunk: dict):</strong> Utility helper formatting chunk data.
+            <ul>
+              <li>Extracts the nested <code>symbol</code> mapping if it exists, default initializing to an empty dict to avoid KeyError.</li>
+              <li>Formats a newline-separated string template: <code>"file: {filePath}\nlanguage: {language}\nsymbol: {name}\n{content}"</code>. Adding the file path and symbol name provides context that enables the embedding model to represent the structural meaning of code (e.g., matching search terms related to file types or module contexts).</li>
+            </ul>
+          </li>
+          <li><strong>@app.post("/repositories/{repository_id}/search"):</strong> Semantic search test/lookup endpoint.
+            <ul>
+              <li><code>embed_texts([request.query])[0]:</code> Computes a query vector of the user's search text.</li>
+              <li><code>query_chunks(repository_id, embedding, request.limit):</code> Queries ChromaDB to find the <code>k</code> (limit) closest documents to the query vector, using cosine similarity matching. Returns the matching document payloads and metadata.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════════════ RAG SERVICE ══════════════ -->
+    <div class="section" id="sec-rag">
+      <div class="section-header">
+        <div class="section-num">PYTHON SERVICE 3 · PORT 8103</div>
+        <div class="section-title">RAG <em>Chat Service</em></div>
+        <div class="section-desc">The heart of the copilot. Retrieval-Augmented Generation: embed the user query → vector search ChromaDB → build a prompt with retrieved code → stream LLM response with citations.</div>
+      </div>
+
+      <div class="alert alert-accent">
+        <strong>🧠 What is RAG?</strong>
+        RAG = Retrieve, then Augment, then Generate. Instead of asking the LLM to recall code from memory (impossible), we retrieve relevant chunks from ChromaDB and paste them directly into the LLM prompt as context.
+      </div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag client">USER</span>
+            <div class="flow-title">"How does authentication work?"</div>
+            <div class="flow-desc">User types question in the chat UI → POST /api/repositories/:id/chat/stream</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">RAG SERVICE</span>
+            <div class="flow-title">Embed the query</div>
+            <div class="flow-desc"><code>embed_texts([query])[0]</code> → dense float[] vector of the question</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag db">CHROMADB</span>
+            <div class="flow-title">Vector similarity search</div>
+            <div class="flow-desc"><code>query_chunks(repo_id, embedding, 8)</code> returns top-8 most semantically similar code chunks with metadata</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">RAG SERVICE</span>
+            <div class="flow-title">Build structured prompt</div>
+            <div class="flow-desc">Formats: system instruction + numbered context blocks (filePath:line-range + code) + user question</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag llm">LLM (Groq/Gemini/OpenRouter)</span>
+            <div class="flow-title">Streaming response</div>
+            <div class="flow-desc"><code>stream_complete(prompt)</code> streams tokens via SSE. Each token → <code>data: token\n\n</code></div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag client">CLIENT</span>
+            <div class="flow-title">Receives tokens + citations</div>
+            <div class="flow-desc">Final SSE event is <code>event: citations</code> with the list of retrieved chunk locations → shown as code links in chat</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python · FastAPI</span><span class="code-file">services/rag-service/main.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="dc">@app.post</span>(<span class="st">"/repositories/{repository_id}/chat/stream"</span>)
+<span class="kw">async def</span> <span class="fn">chat_stream</span>(repository_id: str, request: <span class="ty">RagRequest</span>):
+    embedding = <span class="fn">embed_texts</span>([request.query])[<span class="nb">0</span>]
+    contexts  = <span class="fn">query_chunks</span>(repository_id, embedding, <span class="nb">8</span>)
+    prompt    = <span class="fn">_build_prompt</span>(request.query, contexts)
+
+    <span class="kw">async def</span> <span class="fn">events</span>():
+        <span class="kw">async for</span> token <span class="kw">in</span> <span class="fn">stream_complete</span>(prompt):
+            escaped = token.replace(<span class="st">"\n"</span>, <span class="st">"\\n"</span>)
+            <span class="kw">yield</span> <span class="st">f"data: {escaped}\n\n"</span>    <span class="cm"># SSE token event</span>
+
+        citations = [
+            { <span class="st">"filePath"</span>: item[<span class="st">"metadata"</span>].get(<span class="st">"filePath"</span>),
+              <span class="st">"startLine"</span>: item[<span class="st">"metadata"</span>].get(<span class="st">"startLine"</span>),
+              <span class="st">"endLine"</span>: item[<span class="st">"metadata"</span>].get(<span class="st">"endLine"</span>) }
+            <span class="kw">for</span> item <span class="kw">in</span> contexts
+        ]
+        <span class="kw">yield</span> <span class="st">f"event: citations\ndata: {json.dumps(citations)}\n\n"</span>
+        <span class="kw">yield</span> <span class="st">"event: done\ndata: {}\n\n"</span>
+
+    <span class="kw">return</span> <span class="fn">StreamingResponse</span>(<span class="fn">events</span>(), media_type=<span class="st">"text/event-stream"</span>)</pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: main.py (RAG Service)</h4>
+        <ul>
+          <li><strong>@app.post("/repositories/{repository_id}/chat/stream"):</strong> Asynchronous endpoint that handles incoming chat queries and streams the response back to the client using Server-Sent Events (SSE).
+            <ul>
+              <li><code>embed_texts([request.query])[0]:</code> Encodes the user's natural language question into a vector representing its semantic meaning.</li>
+              <li><code>query_chunks(repository_id, embedding, 8):</code> Performs similarity query search inside ChromaDB and returns the 8 closest matching code chunks (with contents and metadata) associated with the repository ID.</li>
+              <li><code>_build_prompt(request.query, contexts):</code> Assembles the system instructions, the retrieved code segments, and the user's question into a single formatted prompt for the LLM.</li>
+            </ul>
+          </li>
+          <li><strong>events() Asynchronous Generator:</strong>
+            <ul>
+              <li><code>async for token in stream_complete(prompt):</code> Iterates over tokens generated by the LLM in real-time.</li>
+              <li><code>escaped = token.replace("\n", "\\n"):</code> Escapes newline characters as <code>\n</code>. This is required by the SSE protocol, which uses raw double newlines (<code>\n\n</code>) to delimit messages. Without this escaping, newlines within LLM output would break the stream.</li>
+              <li><code>yield f"data: {escaped}\n\n":</code> Emits each escaped token inside an SSE-formatted data wrapper.</li>
+              <li><code>citations = [...]:</code> Builds an array of metadata maps tracking file paths and line ranges for the retrieved code blocks used to formulate the answer.</li>
+              <li><code>yield f"event: citations\ndata: {json.dumps(citations)}\n\n":</code> Emits a custom SSE event named <code>citations</code> containing the source metadata array in JSON format, allowing the client to show interactive citation cards.</li>
+              <li><code>yield "event: done\ndata: {}\n\n":</code> Emits a final event signaling that the generation stream has finished.</li>
+            </ul>
+          </li>
+          <li><strong>StreamingResponse:</strong> Wraps the asynchronous generator in a streaming HTTP response, specifying the content type as <code>text/event-stream</code>. This keeps the connection open while the LLM generates tokens.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════════════ DOC SERVICE ══════════════ -->
+    <div class="section" id="sec-docservice">
+      <div class="section-header">
+        <div class="section-num">PYTHON SERVICE 4 · PORT 8104</div>
+        <div class="section-title">Documentation <em>Service</em></div>
+        <div class="section-desc">Uses the repository analysis + an LLM to auto-generate README documentation, API references, setup guides, and per-module documentation. Writes prompts based on the parsed symbols and file structure.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">📄</div>What It Generates</div>
+        <ul class="checklist">
+          <li><span class="check-icon">✓</span><span><strong>README docs</strong> — project overview, what it does, tech stack based on actual file contents</span></li>
+          <li><span class="check-icon">✓</span><span><strong>API documentation</strong> — lists all REST endpoints found as symbols (kind: "api") with descriptions</span></li>
+          <li><span class="check-icon">✓</span><span><strong>Setup guide</strong> — infers install/run instructions from package.json, requirements.txt, Dockerfiles</span></li>
+          <li><span class="check-icon">✓</span><span><strong>Module docs</strong> — per-file or per-directory explanations of what the module does</span></li>
+        </ul>
+      </div>
+
+      <div class="alert alert-info">
+        <strong>🔄 How it works</strong>
+        The service receives a <code>RepositoryAnalysis</code> from MongoDB (stored when parsing completed). It selects relevant symbols and file content, builds a targeted LLM prompt, and calls <code>common/llm.py complete()</code> to get the documentation text. No streaming for this service — it returns the full doc block.
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🔧</div>LLM Usage Pattern</div>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">services/common/llm.py (key function)</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <pre><span class="kw">async def</span> <span class="fn">complete</span>(prompt: str, system: str = <span class="st">"..."</span>) -> str:
+    chunks = []
+    <span class="kw">async for</span> chunk <span class="kw">in</span> <span class="fn">stream_complete</span>(prompt, system):
+        chunks.append(chunk)
+    <span class="kw">return</span> <span class="st">""</span>.<span class="fn">join</span>(chunks)   <span class="cm"># Full string returned (no streaming)</span></pre>
+        </div>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: llm.py (complete function)</h4>
+        <ul>
+          <li><strong>async def complete(prompt: str, system: str = "...") -> str:</strong> An asynchronous utility function that acts as a wrapper around the token-by-token streaming function, turning it into a single blocking response.
+            <ul>
+              <li><code>chunks = []:</code> Initializes an empty list to store incoming text segments (tokens).</li>
+              <li><code>async for chunk in stream_complete(prompt, system):</code> Iterates asynchronously over the stream of tokens produced by <code>stream_complete</code> (which abstracts calls to Groq/Gemini/OpenRouter).</li>
+              <li><code>chunks.append(chunk):</code> Appends each incoming text chunk (or word token) to the list as it is returned by the LLM client.</li>
+              <li><code>return "".join(chunks):</code> Joins all accumulated string components into a single, cohesive response block. This is useful for backend processes that require a full document structure before continuing, such as generating code reviews, summaries, or structured documentation files.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════════════ ANALYSIS SERVICE ══════════════ -->
+    <div class="section" id="sec-analysis">
+      <div class="section-header">
+        <div class="section-num">PYTHON SERVICE 5 · PORT 8105</div>
+        <div class="section-title">Architecture <em>Analysis Service</em></div>
+        <div class="section-desc">Converts the dependency graph from the parser into React Flow node/edge format for the interactive architecture visualization. Also generates per-function/module natural language explanations.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🗺</div>What It Returns</div>
+        <table>
+          <tr><th>Output</th><th>Used by</th><th>Description</th></tr>
+          <tr><td>React Flow nodes[]</td><td>Frontend viz</td><td>Each file/module becomes a positioned node</td></tr>
+          <tr><td>React Flow edges[]</td><td>Frontend viz</td><td>DependencyEdges become labeled arrows</td></tr>
+          <tr><td>Explanations</td><td>Hover tooltips</td><td>LLM-generated per-function descriptions</td></tr>
+        </table>
+      </div>
+
+      <div class="alert alert-tip">
+        <strong>💡 React Flow Integration</strong>
+        React Flow is a graph library. The analysis service transforms <code>DependencyEdge</code> objects (source → target, kind) into React Flow's <code>Edge</code> format, and each file into a <code>Node</code> with layout coordinates. The frontend renders an interactive, zoomable dependency graph.
+      </div>
+    </div>
+
+    <!-- ══════════════ COMMON MODULE ══════════════ -->
+    <div class="section" id="sec-common">
+      <div class="section-header">
+        <div class="section-num">SHARED LIBRARY</div>
+        <div class="section-title">Common <em>Module</em></div>
+        <div class="section-desc">Shared Python library in services/common/ — imported by ALL microservices. Defines models, embedding logic, LLM calls, and ChromaDB operations. Write once, use everywhere.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">📁</div>common/ Files</div>
+        <table>
+          <tr><th>File</th><th>What it provides</th></tr>
+          <tr><td>models.py</td><td>Pydantic models: CodeChunk, CodeSymbol, RepositoryAnalysis, RagRequest, etc.</td></tr>
+          <tr><td>embeddings.py</td><td><code>embed_texts(texts: list[str]) → list[list[float]]</code> — wraps sentence-transformers</td></tr>
+          <tr><td>llm.py</td><td><code>stream_complete(prompt)</code> + <code>complete(prompt)</code> — Groq/Gemini/OpenRouter/mock</td></tr>
+          <tr><td>vector_store.py</td><td><code>upsert_chunks()</code> + <code>query_chunks()</code> — ChromaDB read/write</td></tr>
+          <tr><td>__init__.py</td><td>Package marker</td></tr>
+        </table>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python</span><span class="code-file">services/common/embeddings.py (pattern)</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="kw">from</span> sentence_transformers <span class="kw">import</span> SentenceTransformer
+
+<span class="cm"># Model loaded once at startup (singleton pattern)</span>
+_model: SentenceTransformer | <span class="kw">None</span> = <span class="kw">None</span>
+
+<span class="kw">def</span> <span class="fn">embed_texts</span>(texts: list[str]) -> list[list[<span class="fn">float</span>]]:
+    <span class="kw">global</span> _model
+    <span class="kw">if</span> _model <span class="kw">is None</span>:
+        _model = <span class="fn">SentenceTransformer</span>(<span class="st">"all-MiniLM-L6-v2"</span>)  <span class="cm"># or CodeBERT</span>
+    vectors = _model.<span class="fn">encode</span>(texts, convert_to_numpy=<span class="nb">True</span>)
+    <span class="kw">return</span> vectors.tolist()</pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: embeddings.py</h4>
+        <ul>
+          <li><strong>Singleton Model Loader (_model):</strong>
+            <ul>
+              <li><code>_model: SentenceTransformer | None = None:</code> Declares a global module-level variable to cache the initialized model. Loading deep learning models from disk is computationally expensive and memory-heavy.</li>
+              <li><code>global _model:</code> Explicitly binds the local scope to the module-level variable.</li>
+              <li><code>if _model is None: _model = SentenceTransformer("all-MiniLM-L6-v2"):</code> Ensures the neural network model is loaded exactly once (when the function is first called by any endpoint) and reused for all subsequent requests. This is the Singleton Pattern, preventing massive memory leaks and CPU overhead.</li>
+            </ul>
+          </li>
+          <li><strong>embed_texts(texts: list[str]) -> list[list[float]]:</strong>
+            <ul>
+              <li>Converts a batch of plain-text code chunks or queries into dense mathematical vector representations.</li>
+              <li><code>_model.encode(texts, convert_to_numpy=True):</code> Feeds the batch of texts to the transformer. It generates numerical vectors mapping semantic meaning. High-dimensional vector space positioning mirrors textual context (similar concepts end up close together).</li>
+              <li><code>vectors.tolist():</code> Converts the high-performance NumPy float arrays into standard Python nested float lists, which can be easily serialized to JSON and stored by vector databases like ChromaDB.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="alert alert-warning">
+        <strong>⚠️ How services import common/</strong>
+        Each Docker service sets <code>PYTHONPATH=/services</code> (via Dockerfile). So <code>from common.embeddings import embed_texts</code> resolves to <code>/services/common/embeddings.py</code>. This is why all services build from the same Docker context (<code>context: ./services</code>).
+      </div>
+    </div>
+
+    <!-- ══════════════ VECTOR STORE ══════════════ -->
+    <div class="section" id="sec-vectorstore">
+      <div class="section-header">
+        <div class="section-num">DATABASE 2</div>
+        <div class="section-title">ChromaDB <em>Vector Store</em></div>
+        <div class="section-desc">ChromaDB is the vector database. Code chunks are stored as (vector + metadata + content). Semantic search finds the most relevant chunks for any user query in milliseconds.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🔵</div>Key Concepts</div>
+        <table>
+          <tr><th>Concept</th><th>Meaning</th></tr>
+          <tr><td>Collection</td><td>Like a table — one collection per repository, named by repository_id</td></tr>
+          <tr><td>Embedding</td><td>Dense float[] vector representing semantic meaning of a code chunk</td></tr>
+          <tr><td>Metadata</td><td>Stored alongside each vector: filePath, startLine, endLine, language, symbol name</td></tr>
+          <tr><td>Query</td><td>Embed the search query → compare cosine similarity to all stored vectors → return top-k matches</td></tr>
+          <tr><td>Upsert</td><td>Insert or update chunks by ID (idempotent re-indexing)</td></tr>
+        </table>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python</span><span class="code-file">services/common/vector_store.py (pattern)</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="kw">import</span> chromadb, os
+
+<span class="kw">def</span> <span class="fn">_client</span>():
+    <span class="kw">return</span> chromadb.<span class="fn">HttpClient</span>(
+        host=os.getenv(<span class="st">"CHROMA_HOST"</span>, <span class="st">"localhost"</span>),
+        port=<span class="fn">int</span>(os.getenv(<span class="st">"CHROMA_PORT"</span>, <span class="st">"8000"</span>))
+    )
+
+<span class="kw">def</span> <span class="fn">upsert_chunks</span>(repo_id: str, chunks: list[dict], embeddings: list[list[<span class="fn">float</span>]]):
+    col = <span class="fn">_client</span>().<span class="fn">get_or_create_collection</span>(repo_id)
+    col.<span class="fn">upsert</span>(
+        ids=[c[<span class="st">"id"</span>] <span class="kw">for</span> c <span class="kw">in</span> chunks],
+        embeddings=embeddings,
+        documents=[c[<span class="st">"content"</span>] <span class="kw">for</span> c <span class="kw">in</span> chunks],
+        metadatas=[{<span class="st">"filePath"</span>: c[<span class="st">"filePath"</span>], <span class="st">"startLine"</span>: c[<span class="st">"startLine"</span>],
+                    <span class="st">"endLine"</span>: c[<span class="st">"endLine"</span>]} <span class="kw">for</span> c <span class="kw">in</span> chunks]
+    )
+
+<span class="kw">def</span> <span class="fn">query_chunks</span>(repo_id: str, embedding: list[<span class="fn">float</span>], n: <span class="fn">int</span>) -> list[dict]:
+    col = <span class="fn">_client</span>().<span class="fn">get_collection</span>(repo_id)
+    results = col.<span class="fn">query</span>(query_embeddings=[embedding], n_results=n)
+    <span class="kw">return</span> [
+        {<span class="st">"content"</span>: doc, <span class="st">"metadata"</span>: meta}
+        <span class="kw">for</span> doc, meta <span class="kw">in</span> <span class="fn">zip</span>(results[<span class="st">"documents"</span>][<span class="nb">0</span>], results[<span class="st">"metadatas"</span>][<span class="nb">0</span>])
+    ]</pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: vector_store.py</h4>
+        <ul>
+          <li><strong>_client():</strong> Connection helper.
+            <ul>
+              <li><code>chromadb.HttpClient(...):</code> Lazy-initializes and returns a client pointing to the ChromaDB daemon. ChromaDB is run as a separate service inside Docker container space.</li>
+              <li><code>os.getenv("CHROMA_HOST", "localhost"):</code> Resolves host routing. When running locally, it defaults to localhost; in Docker Compose, it resolves to the container host name (<code>"chromadb"</code>).</li>
+            </ul>
+          </li>
+          <li><strong>upsert_chunks(repo_id, chunks, embeddings):</strong> Idempotent write operation.
+            <ul>
+              <li><code>col = _client().get_or_create_collection(repo_id):</code> Fetches the vector space index partition designated for this repository, creating it if it is the first time the repo is indexed. Dividing documents into per-repository collections isolates queries, meaning searches are fast and never leak chunks across different repositories.</li>
+              <li><code>col.upsert(...):</code> Idempotently inserts or updates vectors and documents. Using upsert prevents index duplication if the user triggers repository re-indexing.
+                <ul>
+                  <li><code>ids:</code> Unique hash keys identifying each chunk block.</li>
+                  <li><code>embeddings:</code> Numerical vector float matrices generated by the embedding model.</li>
+                  <li><code>documents:</code> The source code lines stored as plain text. This content is retrieved and injected directly into LLM prompt contexts at query time.</li>
+                  <li><code>metadatas:</code> A collection of key-value pairs matching each vector (e.g. <code>filePath</code>, <code>startLine</code>, <code>endLine</code>). These tags can be queried directly, and serve as citations.</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li><strong>query_chunks(repo_id, embedding, n):</strong> Similarity search query.
+            <ul>
+              <li><code>col.query(query_embeddings=[embedding], n_results=n):</code> Executes cosine similarity matching inside ChromaDB. It compares the dense vector representation of the user's question against all indexed chunks in the repository collection, returning the <code>n</code> closest snippets.</li>
+              <li><code>zip(results["documents"][0], results["metadatas"][0]):</code> Combines the returned file text and metadata dictionary, producing a list of dictionaries with structure: <code>{"content": doc, "metadata": meta}</code>.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════════════ LLM PROVIDERS ══════════════ -->
+    <div class="section" id="sec-llmproviders">
+      <div class="section-header">
+        <div class="section-num">EXTERNAL AI</div>
+        <div class="section-title">LLM <em>Providers</em></div>
+        <div class="section-desc">The system supports Groq, Gemini, and OpenRouter as streaming LLM backends. Provider selection is environment-variable driven — no code changes needed to switch models.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🤖</div>Provider Comparison</div>
+        <table>
+          <tr><th>Provider</th><th>Env Var</th><th>Default Model</th><th>Notes</th></tr>
+          <tr><td>Groq</td><td>GROQ_API_KEY</td><td>llama-3.3-70b-versatile</td><td>Fastest inference, OpenAI-compatible API</td></tr>
+          <tr><td>Gemini</td><td>GEMINI_API_KEY</td><td>gemini-1.5-pro</td><td>Google's API, large context window</td></tr>
+          <tr><td>OpenRouter</td><td>OPENROUTER_API_KEY</td><td>anthropic/claude-3.5-sonnet</td><td>Routes to any model, OpenAI-compatible</td></tr>
+          <tr><td>Mock (default)</td><td>—</td><td>—</td><td>Returns truncated prompt — works offline with no API keys</td></tr>
+        </table>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python</span><span class="code-file">services/common/llm.py — Provider routing</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="kw">async def</span> <span class="fn">stream_complete</span>(prompt: str, system: str = <span class="st">"..."</span>) -> <span class="ty">AsyncIterator</span>[str]:
+    provider = os.<span class="fn">getenv</span>(<span class="st">"LLM_PROVIDER"</span>, <span class="st">"mock"</span>).lower()
+
+    <span class="kw">if</span> provider == <span class="st">"groq"</span> <span class="kw">and</span> os.<span class="fn">getenv</span>(<span class="st">"GROQ_API_KEY"</span>):
+        <span class="kw">async for</span> token <span class="kw">in</span> <span class="fn">_stream_openai_compatible</span>(
+            <span class="st">"https://api.groq.com/openai/v1/chat/completions"</span>,
+            os.environ[<span class="st">"GROQ_API_KEY"</span>],
+            os.<span class="fn">getenv</span>(<span class="st">"GROQ_MODEL"</span>, <span class="st">"llama-3.3-70b-versatile"</span>),
+            prompt, system
+        ): <span class="kw">yield</span> token; <span class="kw">return</span>
+
+    <span class="kw">if</span> provider == <span class="st">"gemini"</span> <span class="kw">and</span> os.<span class="fn">getenv</span>(<span class="st">"GEMINI_API_KEY"</span>):
+        <span class="kw">yield await</span> <span class="fn">_complete_gemini</span>(prompt, system); <span class="kw">return</span>
+
+    <span class="kw">yield</span> <span class="fn">_offline_answer</span>(prompt)  <span class="cm"># fallback mock</span></pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: llm.py (Provider Routing)</h4>
+        <ul>
+          <li><strong>async def stream_complete(prompt: str, system: str = "...") -> AsyncIterator[str]:</strong> Asynchronous generator function that yields text tokens from the LLM, abstracting away different model providers.
+            <ul>
+              <li><code>provider = os.getenv("LLM_PROVIDER", "mock").lower():</code> Reads the configured AI backend from environment variables, defaulting to <code>"mock"</code> for offline execution.</li>
+              <li><strong>Groq Integration:</strong>
+                <ul>
+                  <li>Checks if <code>provider == "groq"</code> and that the corresponding API key exists.</li>
+                  <li><code>_stream_openai_compatible(...):</code> Connects to Groq's OpenAI-compatible endpoint. It forwards authorization headers, specifies the LLaMA model, and streams generated text chunks using standard Server-Sent Events (SSE).</li>
+                  <li><code>yield token; return:</code> Yields tokens sequentially to the caller. The generator terminates immediately on completion (<code>return</code>) to prevent fallbacks.</li>
+                </ul>
+              </li>
+              <li><strong>Gemini Integration:</strong>
+                <ul>
+                  <li>Checks if <code>provider == "gemini"</code> and that the corresponding Google API key is configured.</li>
+                  <li><code>yield await _complete_gemini(prompt, system):</code> Calls the Gemini REST endpoint. Since Gemini's standard REST endpoints do not stream using OpenAI's SSE chunk format, it returns the complete generated response in one block.</li>
+                </ul>
+              </li>
+              <li><strong>Mock Fallback:</strong>
+                <ul>
+                  <li>If the environment variable is unset, or set to <code>"mock"</code>, the generator executes <code>_offline_answer(prompt)</code>. This helper returns a static message followed by a truncation of the compiled prompt, enabling local testing and verification without network requests or API costs.</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="alert alert-warning">
+        <strong>⚠️ Groq vs Gemini streaming difference</strong>
+        Groq and OpenRouter use OpenAI-compatible SSE streaming (<code>data: [DONE]</code> pattern). Gemini uses a different REST API and doesn't natively stream the same way — so the Gemini path uses <code>complete()</code> not <code>stream_complete()</code>, returning the full response at once.
+      </div>
+    </div>
+
+    <!-- ══════════════ UPLOAD FLOW ══════════════ -->
+    <div class="section" id="sec-uploadflow">
+      <div class="section-header">
+        <div class="section-num">END-TO-END FLOW 1</div>
+        <div class="section-title">Repository <em>Upload Flow</em></div>
+        <div class="section-desc">From the moment the user pastes a GitHub URL or uploads a ZIP to the moment "Ready" appears in the UI — every step explained.</div>
+      </div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag client">React UI</span>
+            <div class="flow-title">1. User submits GitHub URL or ZIP</div>
+            <div class="flow-desc">Frontend POSTs to <code>/api/repositories</code> with <code>sourceType: "github"</code> + URL or multipart ZIP data. JWT token in Authorization header.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag server">Node Gateway</span>
+            <div class="flow-title">2. Create Repository record in MongoDB</div>
+            <div class="flow-desc">Validates JWT → extracts ownerId → creates <code>Repository</code> doc with <code>status: "queued"</code>. Returns the new repo ID to client.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag server">Node Gateway</span>
+            <div class="flow-title">3. Update status → "parsing", call Parser</div>
+            <div class="flow-desc">Gateway updates MongoDB, then POSTs to <code>http://repository-parser-service:8101/parse</code> with the URL or ZIP file path.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">Parser Service (8101)</span>
+            <div class="flow-title">4. Parse repository → RepositoryAnalysis</div>
+            <div class="flow-desc">Clones/extracts files, scans each, extracts symbols, chunks, dependencies. Returns full <code>RepositoryAnalysis</code> JSON.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag server">Node Gateway</span>
+            <div class="flow-title">5. Store analysis, update status → "embedding"</div>
+            <div class="flow-desc">Saves <code>analysis</code> field in MongoDB, then POSTs analysis to <code>http://embedding-service:8102/repositories/:id/index</code></div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">Embedding Service (8102)</span>
+            <div class="flow-title">6. Embed all chunks → upsert to ChromaDB</div>
+            <div class="flow-desc">Generates sentence-transformer vectors for each chunk. Upserts into ChromaDB collection named by repository_id.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag server">Node Gateway</span>
+            <div class="flow-title">7. Update status → "ready"</div>
+            <div class="flow-desc">MongoDB status set to "ready". Frontend polls GET /api/repositories/:id and sees "ready" — chat interface unlocks.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-danger">
+        <strong>⚠️ If parsing or embedding fails</strong>
+        Status is set to <code>"failed"</code> and <code>lastError</code> is populated with the error message. The client displays this error to the user.
+      </div>
+    </div>
+
+    <!-- ══════════════ RAG FLOW ══════════════ -->
+    <div class="section" id="sec-ragflow">
+      <div class="section-header">
+        <div class="section-num">END-TO-END FLOW 2</div>
+        <div class="section-title">RAG <em>Chat Flow</em></div>
+        <div class="section-desc">Every detail of what happens when a user sends a chat message — from keypress to streaming tokens appearing on screen.</div>
+      </div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag client">React UI</span>
+            <div class="flow-title">1. User sends message</div>
+            <div class="flow-desc">POST to <code>/api/repositories/:repoId/chat/stream</code> with body <code>{ query, chatId }</code>. Response is kept as a streaming response.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag server">Node Gateway</span>
+            <div class="flow-title">2. Auth check + proxy to RAG service</div>
+            <div class="flow-desc">Validates JWT, looks up the repository to confirm "ready" status, pipes the request to RAG service at port 8103, proxies the SSE stream back to client.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">RAG Service (8103)</span>
+            <div class="flow-title">3. Embed query → vector search</div>
+            <div class="flow-desc"><code>embed_texts([query])[0]</code> → float[] vector → <code>query_chunks(repo_id, embedding, 8)</code> → top 8 chunks from ChromaDB</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">RAG Service</span>
+            <div class="flow-title">4. Build prompt with context</div>
+            <div class="flow-desc">Formats: <em>"Answer using only this code context: [1] auth.ts:10-45 &lt;code&gt; [2] models.ts:5-20 &lt;code&gt; ... Question: {query}"</em></div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag llm">LLM Provider</span>
+            <div class="flow-title">5. Streams tokens back</div>
+            <div class="flow-desc">Each word/token arrives as an SSE chunk: <code>data: " the\n\n"</code> → gateway pipes to client → UI renders text word by word</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag python">RAG Service</span>
+            <div class="flow-title">6. Send citations event</div>
+            <div class="flow-desc">After all tokens: <code>event: citations\ndata: [{filePath, startLine, endLine}, ...]</code> — tells client which files were used</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag client">React UI</span>
+            <div class="flow-title">7. Save to MongoDB chat history</div>
+            <div class="flow-desc">After stream ends, gateway saves the full message + citations to the Chat document in MongoDB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ AUTH FLOW ══════════════ -->
+    <div class="section" id="sec-authflow">
+      <div class="section-header">
+        <div class="section-num">SECURITY</div>
+        <div class="section-title">Auth <em>&amp; JWT</em></div>
+        <div class="section-desc">JWT-based stateless authentication. Passwords bcrypt-hashed. Every protected endpoint validates the Bearer token before any action.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🔐</div>Auth Flow</div>
+        <table>
+          <tr><th>Step</th><th>Action</th><th>Details</th></tr>
+          <tr><td>Register</td><td>POST /api/auth/register</td><td>Hash password with bcrypt, save User, return JWT</td></tr>
+          <tr><td>Login</td><td>POST /api/auth/login</td><td>Compare bcrypt hash, return signed JWT (7 day expiry)</td></tr>
+          <tr><td>Request</td><td>Authorization: Bearer &lt;token&gt;</td><td>Client sends JWT in every API call header</td></tr>
+          <tr><td>Verify</td><td>jwt.verify(token, JWT_SECRET)</td><td>Middleware extracts user ID from payload</td></tr>
+          <tr><td>Access control</td><td>ownerId check</td><td>Users can only access their own repositories and chats</td></tr>
+        </table>
+      </div>
+
+      <div class="alert alert-warning">
+        <strong>⚠️ Security notes</strong>
+        <code>JWT_SECRET</code> must be a long random string in production. The default <code>development-secret-change-me</code> in docker-compose is insecure. API keys (Groq, Gemini) should be in <code>.env</code> which is <code>.gitignore</code>d — never committed to GitHub.
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">TypeScript</span><span class="code-file">server/src/middleware/ (auth pattern)</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="cm">// Applied to all routes except /api/auth/*</span>
+<span class="kw">const</span> <span class="fn">authMiddleware</span> = (req, res, next) => {
+  <span class="kw">const</span> token = req.headers.authorization?.split(<span class="st">' '</span>)[<span class="nb">1</span>];  <span class="cm">// "Bearer &lt;token&gt;"</span>
+  <span class="kw">if</span> (!token) <span class="kw">return</span> res.<span class="fn">status</span>(<span class="nb">401</span>).<span class="fn">json</span>({ error: <span class="st">'No token'</span> });
+  <span class="kw">const</span> payload = jwt.<span class="fn">verify</span>(token, JWT_SECRET);
+  req.userId = payload.sub;   <span class="cm">// attach userId to request</span>
+  <span class="fn">next</span>();
+};</pre>
+      </div>
+      <div class="code-explain">
+        <h4>🔍 Detailed Code Explanation: authMiddleware</h4>
+        <ul>
+          <li><strong>const authMiddleware = (req, res, next) => { ... }:</strong> Express custom middleware function used to protect routes from unauthorized access.
+            <ul>
+              <li>It intercept HTTP requests, verifying user credentials prior to routing the request payload to CRUD or microservice proxy handlers.</li>
+              <li><code>req.headers.authorization?.split(' ')[1]:</code> Parses the HTTP <code>Authorization</code> header. The safe-navigation operator (<code>?.</code>) avoids throwing runtime errors if the header is missing. It splits the string by spaces to isolate the token from the <code>"Bearer &lt;token&gt;"</code> format schema.</li>
+              <li><code>if (!token) return res.status(401).json({ error: 'No token' }):</code> If the header is missing or does not contain a token, the middleware halts request processing and returns an HTTP 401 Unauthorized status, protecting downstream resources.</li>
+              <li><code>jwt.verify(token, JWT_SECRET):</code> Decodes and cryptographically validates the token signature using the server secret key. If the token has been altered, or has expired, this function throws an error, causing the middleware chain to break (usually caught by a global error handler or returning 403 Forbidden).</li>
+              <li><code>req.userId = payload.sub;:</code> Extracts the token's subject (<code>sub</code>) property—which is the user's unique database object ID—and binds it to the request object as <code>req.userId</code>. This allows downstream handlers to know which user is making the request and enforce proper ownership checks.</li>
+              <li><code>next();:</code> Invokes the callback function to pass control to the next handler or middleware in the Express routing stack.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ══════════════ DOCKER ══════════════ -->
+    <div class="section" id="sec-docker">
+      <div class="section-header">
+        <div class="section-num">INFRASTRUCTURE</div>
+        <div class="section-title">Docker <em>Compose</em></div>
+        <div class="section-desc">One command starts the entire 9-service stack. Each service has its own Dockerfile. Volumes persist MongoDB data, ChromaDB vectors, and uploaded files across restarts.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🐳</div>docker-compose.yml Services Summary</div>
+        <table>
+          <tr><th>Service Name</th><th>Build Source</th><th>Depends On</th></tr>
+          <tr><td>mongo</td><td>mongo:7 image</td><td>—</td></tr>
+          <tr><td>chromadb</td><td>chromadb/chroma:0.5.23</td><td>—</td></tr>
+          <tr><td>repository-parser-service</td><td>./services/repository-parser-service</td><td>—</td></tr>
+          <tr><td>embedding-service</td><td>./services/embedding-service</td><td>chromadb</td></tr>
+          <tr><td>rag-service</td><td>./services/rag-service</td><td>chromadb, embedding-service</td></tr>
+          <tr><td>documentation-service</td><td>./services/documentation-service</td><td>—</td></tr>
+          <tr><td>analysis-service</td><td>./services/analysis-service</td><td>—</td></tr>
+          <tr><td>minigpt-service</td><td>./services/minigpt-service</td><td>—</td></tr>
+          <tr><td>server (gateway)</td><td>./server</td><td>all above</td></tr>
+          <tr><td>client</td><td>./client</td><td>server</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">💾</div>Docker Volumes</div>
+        <table>
+          <tr><th>Volume</th><th>Mounted By</th><th>Persists</th></tr>
+          <tr><td>mongo_data</td><td>mongo</td><td>All MongoDB collections (users, repos, chats)</td></tr>
+          <tr><td>chroma_data</td><td>chromadb</td><td>All vector embeddings indexed by repo ID</td></tr>
+          <tr><td>service_data</td><td>parser + embedder</td><td>Extracted/cloned repository files</td></tr>
+          <tr><td>gateway_uploads</td><td>server</td><td>ZIP files uploaded by users</td></tr>
+        </table>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Bash</span><span class="code-file">Quick start commands</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="cm"># Start the full stack (first run takes a while — downloads images, builds)</span>
+docker compose up --build
+
+<span class="cm"># Open the app</span>
+open http://localhost:5173
+
+<span class="cm"># Local dev (no Docker)</span>
+npm run dev:server    <span class="cm"># starts Node gateway on :8080</span>
+npm run dev:client    <span class="cm"># starts Vite on :5173</span>
+
+<span class="cm"># Run a Python service locally</span>
+cd services/rag-service
+set PYTHONPATH=..
+uvicorn main:app --reload --port 8103</pre>
+      </div>
+      <div class="code-explain">
+        <h4>📋 Reference: CLI Quick Start & Development Commands</h4>
+        <ul>
+          <li><strong>docker compose up --build:</strong> Starts the multi-container stack, orchestrating MongoDB, ChromaDB, five FastAPI services, the Node API gateway, and the Vite dev server.</li>
+          <li><strong>npm run dev:server / dev:client:</strong> Development commands to run the Node.js API Gateway (port 8080) and React client (port 5173) locally outside of Docker.</li>
+          <li><strong>set PYTHONPATH=.. && uvicorn main:app:</strong> Sets Python path context and runs a standalone Uvicorn web server to debug individual Python services.</li>
+        </ul>
+      </div>
+    </div>
+    </div>
+
+    <!-- ══════════════ ENV ══════════════ -->
+    <div class="section" id="sec-env">
+      <div class="section-header">
+        <div class="section-num">CONFIGURATION</div>
+        <div class="section-title">Config <em>&amp; .env</em></div>
+        <div class="section-desc">All secrets and service URLs are configured via environment variables. Copy .env.example to .env and fill in at least one LLM API key to use the system.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">⚙</div>Key Environment Variables</div>
+        <table>
+          <tr><th>Variable</th><th>Default</th><th>What it configures</th></tr>
+          <tr><td>JWT_SECRET</td><td>development-secret-…</td><td>Token signing key — MUST change in prod</td></tr>
+          <tr><td>MONGODB_URI</td><td>mongodb://mongo:27017/codeinsight</td><td>Database connection string</td></tr>
+          <tr><td>CHROMA_HOST</td><td>chromadb</td><td>ChromaDB hostname (Docker service name)</td></tr>
+          <tr><td>CHROMA_PORT</td><td>8000</td><td>ChromaDB port</td></tr>
+          <tr><td>LLM_PROVIDER</td><td>mock</td><td>groq | gemini | openrouter | mock</td></tr>
+          <tr><td>GROQ_API_KEY</td><td></td><td>Groq API key for LLaMA inference</td></tr>
+          <tr><td>GEMINI_API_KEY</td><td></td><td>Google Gemini API key</td></tr>
+          <tr><td>OPENROUTER_API_KEY</td><td></td><td>OpenRouter API key</td></tr>
+          <tr><td>PARSER_SERVICE_URL</td><td>http://repository-parser-service:8101</td><td>Parser microservice URL</td></tr>
+          <tr><td>RAG_SERVICE_URL</td><td>http://rag-service:8103</td><td>RAG microservice URL</td></tr>
+          <tr><td>CLIENT_ORIGIN</td><td>http://localhost:5173</td><td>CORS allowed origin</td></tr>
+        </table>
+      </div>
+
+      <div class="alert alert-danger">
+        <strong>🔴 Never commit .env to git</strong>
+        The <code>.gitignore</code> already excludes <code>.env</code>. Always use <code>.env.example</code> as the template (with placeholder values). If you accidentally push API keys, rotate them immediately.
+      </div>
+    </div>
+
+    <!-- ══════════════ Q&A ══════════════ -->
+    <div class="section" id="sec-qa">
+      <div class="section-header">
+        <div class="section-num">INTERVIEW PREP</div>
+        <div class="section-title">Q &amp; <em>A</em></div>
+        <div class="section-desc">Click each question to reveal the answer. Test yourself before reading.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)"><span>What is RAG and why is it used here instead of fine-tuning?</span><span class="qa-arrow">›</span></div>
+        <div class="qa-a">RAG (Retrieval-Augmented Generation) retrieves relevant documents at query time and injects them into the LLM prompt as context. Fine-tuning bakes knowledge into model weights — you'd need to fine-tune again every time a new repository is uploaded. RAG is dynamic, works with any repo immediately, and the LLM doesn't need to "remember" code it's never seen. It also provides verifiable citations.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)"><span>Why are there separate services for parsing, embedding, and RAG instead of one Python monolith?</span><span class="qa-arrow">›</span></div>
+        <div class="qa-a">Microservices allow independent scaling (embedding is CPU/GPU intensive — scale it separately), independent deployment (update RAG without touching the parser), and clear boundaries of concern. Each service can be restarted or debugged in isolation. The common/ library prevents code duplication while keeping services independent.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)"><span>Why does the parser extract "chunks" instead of embedding whole files?</span><span class="qa-arrow">›</span></div>
+        <div class="qa-a">Embedding a 2000-line file creates one noisy vector that captures everything loosely. A function-level chunk (30–80 lines) creates a precise, semantically focused vector. When a user asks "how does login work?", the similarity search returns the exact login() function chunk — not the whole auth.ts file. Chunk-level embeddings dramatically improve retrieval precision.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)"><span>How does streaming work technically (SSE)?</span><span class="qa-arrow">›</span></div>
+        <div class="qa-a">Server-Sent Events (SSE) is a one-directional HTTP stream. The server keeps the connection open and sends <code>data: &lt;content&gt;\n\n</code> messages. FastAPI returns a <code>StreamingResponse</code>. The Node gateway proxies this stream. The React client reads it with <code>fetch()</code> + <code>ReadableStream</code>. Each token from the LLM becomes one SSE message, creating the word-by-word streaming effect.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)"><span>What is ChromaDB and why not use a regular SQL database for vectors?</span><span class="qa-arrow">›</span></div>
+        <div class="qa-a">ChromaDB is a purpose-built vector database that stores dense float[] embeddings and enables fast approximate nearest-neighbor (ANN) search using cosine similarity. A regular SQL database can store float arrays, but querying "find the 8 most similar vectors to this query vector" across 100k rows would be extremely slow without specialized indexing (like HNSW, which ChromaDB uses internally). ChromaDB is optimized for exactly this semantic similarity use case.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)"><span>Why does the embedding text include file, language, and symbol name — not just the code?</span><span class="qa-arrow">›</span></div>
+        <div class="qa-a">The embedding model (sentence-transformers) creates a vector that represents the semantics of the input text. By prepending contextual metadata — "file: src/auth/login.ts, language: typescript, symbol: loginUser" — the embedding captures not just what the code does, but where it lives and what it's called. This means a query like "the TypeScript login function" will more likely retrieve the right chunk vs just embedding raw code.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)"><span>What happens if the repository has no LLM provider configured?</span><span class="qa-arrow">›</span></div>
+        <div class="qa-a">The <code>_offline_answer()</code> function in <code>common/llm.py</code> is called. It returns a static string explaining that the LLM is not configured, followed by the first 3000 characters of the constructed prompt (which includes the retrieved code context). The system still works — you can see which code chunks were retrieved — but there's no LLM-generated answer.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)"><span>How does the repository status flow through the system?</span><span class="qa-arrow">›</span></div>
+        <div class="qa-a">Status is stored in MongoDB as a simple string field. The Node gateway drives the state machine: on upload → "queued" → calls parser → "parsing" → receives analysis → calls embedder → "embedding" → embedding done → "ready". If any step throws an error, the gateway catches it, sets status to "failed" and stores the error message in <code>lastError</code>. The frontend polls the status endpoint every few seconds until it sees "ready" or "failed".</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q" onclick="toggleQA(this)"><span>Why does the Node.js gateway exist — why not call Python services directly from the frontend?</span><span class="qa-arrow">›</span></div>
+        <div class="qa-a">Security and separation of concerns. The gateway (1) handles authentication — Python services don't need to implement JWT, (2) enforces access control — users can only access their own repos, (3) manages MongoDB — Python services stay stateless, (4) orchestrates the multi-step parse → embed pipeline, (5) is a single CORS-enabled entry point for the browser — the browser never directly reaches Python services.</div>
+      </div>
+    </div>
+
+    <!-- ══════════════ CHEAT SHEET ══════════════ -->
+    <div class="section" id="sec-cheatsheet">
+      <div class="section-header">
+        <div class="section-num">REVISION</div>
+        <div class="section-title">Cheat <em>Sheet</em></div>
+        <div class="section-desc">Everything critical on one page. Bookmark and review before interviews or demos.</div>
+      </div>
+
+      <div class="cheat-grid">
+        <div class="cheat-card">
+          <h4>Service Ports</h4>
+          <div class="cheat-row"><span class="cheat-key">:5173</span><span class="cheat-val">React Client</span></div>
+          <div class="cheat-row"><span class="cheat-key">:8080</span><span class="cheat-val">Node Gateway</span></div>
+          <div class="cheat-row"><span class="cheat-key">:8000</span><span class="cheat-val">ChromaDB</span></div>
+          <div class="cheat-row"><span class="cheat-key">:8101</span><span class="cheat-val">Parser Service</span></div>
+          <div class="cheat-row"><span class="cheat-key">:8102</span><span class="cheat-val">Embedding Service</span></div>
+          <div class="cheat-row"><span class="cheat-key">:8103</span><span class="cheat-val">RAG Service</span></div>
+          <div class="cheat-row"><span class="cheat-key">:8104</span><span class="cheat-val">Doc Service</span></div>
+          <div class="cheat-row"><span class="cheat-key">:8105</span><span class="cheat-val">Analysis Service</span></div>
+          <div class="cheat-row"><span class="cheat-key">:27017</span><span class="cheat-val">MongoDB</span></div>
+        </div>
+
+        <div class="cheat-card">
+          <h4>Repo Status Flow</h4>
+          <div class="cheat-row"><span class="cheat-key">queued</span><span class="cheat-val">just created</span></div>
+          <div class="cheat-row"><span class="cheat-key">parsing</span><span class="cheat-val">parser running</span></div>
+          <div class="cheat-row"><span class="cheat-key">embedding</span><span class="cheat-val">indexing vectors</span></div>
+          <div class="cheat-row"><span class="cheat-key">ready</span><span class="cheat-val">chat enabled</span></div>
+          <div class="cheat-row"><span class="cheat-key">failed</span><span class="cheat-val">error in lastError</span></div>
+        </div>
+
+        <div class="cheat-card">
+          <h4>MongoDB Collections</h4>
+          <div class="cheat-row"><span class="cheat-key">users</span><span class="cheat-val">email, passwordHash</span></div>
+          <div class="cheat-row"><span class="cheat-key">repositories</span><span class="cheat-val">status, ownerId, analysis</span></div>
+          <div class="cheat-row"><span class="cheat-key">chats</span><span class="cheat-val">messages[], citations[]</span></div>
+        </div>
+
+        <div class="cheat-card">
+          <h4>Key Common Functions</h4>
+          <div class="cheat-row"><span class="cheat-key">embed_texts()</span><span class="cheat-val">text → vectors</span></div>
+          <div class="cheat-row"><span class="cheat-key">stream_complete()</span><span class="cheat-val">prompt → token stream</span></div>
+          <div class="cheat-row"><span class="cheat-key">query_chunks()</span><span class="cheat-val">embed → top-k results</span></div>
+          <div class="cheat-row"><span class="cheat-key">upsert_chunks()</span><span class="cheat-val">store in ChromaDB</span></div>
+        </div>
+
+        <div class="cheat-card">
+          <h4>LLM Providers (.env)</h4>
+          <div class="cheat-row"><span class="cheat-key">LLM_PROVIDER=groq</span><span class="cheat-val">fastest</span></div>
+          <div class="cheat-row"><span class="cheat-key">LLM_PROVIDER=gemini</span><span class="cheat-val">Google</span></div>
+          <div class="cheat-row"><span class="cheat-key">LLM_PROVIDER=openrouter</span><span class="cheat-val">any model</span></div>
+          <div class="cheat-row"><span class="cheat-key">LLM_PROVIDER=mock</span><span class="cheat-val">offline/no key</span></div>
+        </div>
+
+        <div class="cheat-card">
+          <h4>Pydantic Models</h4>
+          <div class="cheat-row"><span class="cheat-key">CodeChunk</span><span class="cheat-val">file slice + content</span></div>
+          <div class="cheat-row"><span class="cheat-key">CodeSymbol</span><span class="cheat-val">fn/class/api name</span></div>
+          <div class="cheat-row"><span class="cheat-key">DependencyEdge</span><span class="cheat-val">source→target link</span></div>
+          <div class="cheat-row"><span class="cheat-key">RepositoryAnalysis</span><span class="cheat-val">full parse result</span></div>
+          <div class="cheat-row"><span class="cheat-key">RagRequest</span><span class="cheat-val">query + chatId</span></div>
+        </div>
+
+        <div class="cheat-card">
+          <h4>RAG Pipeline Steps</h4>
+          <div class="cheat-row"><span class="cheat-key">1. Embed query</span><span class="cheat-val">text → float[]</span></div>
+          <div class="cheat-row"><span class="cheat-key">2. Vector search</span><span class="cheat-val">cosine sim top-8</span></div>
+          <div class="cheat-row"><span class="cheat-key">3. Build prompt</span><span class="cheat-val">context + question</span></div>
+          <div class="cheat-row"><span class="cheat-key">4. LLM stream</span><span class="cheat-val">SSE token-by-token</span></div>
+          <div class="cheat-row"><span class="cheat-key">5. Citations</span><span class="cheat-val">filePath:lines sent</span></div>
+        </div>
+
+        <div class="cheat-card">
+          <h4>Docker Volumes</h4>
+          <div class="cheat-row"><span class="cheat-key">mongo_data</span><span class="cheat-val">all user data</span></div>
+          <div class="cheat-row"><span class="cheat-key">chroma_data</span><span class="cheat-val">all vectors</span></div>
+          <div class="cheat-row"><span class="cheat-key">service_data</span><span class="cheat-val">parsed repos</span></div>
+          <div class="cheat-row"><span class="cheat-key">gateway_uploads</span><span class="cheat-val">ZIP files</span></div>
+        </div>
+      </div>
+
+      <div class="alert alert-tip" style="margin-top:1.5rem">
+        <strong>📌 How to run it end-to-end</strong>
+        1. Copy <code>.env.example</code> → <code>.env</code> and add a Groq or Gemini API key. 2. Run <code>docker compose up --build</code>. 3. Open <code>http://localhost:5173</code>. 4. Sign up. 5. Paste a GitHub URL (e.g. your own repo). 6. Wait for status → "ready". 7. Ask "How does authentication work?". You'll get a streamed answer with file citations.
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+const SECTIONS = [
+  'overview','architecture','frontend','gateway','datamodels',
+  'parser','embedding','rag','docservice','analysis',
+  'common','vectorstore','llmproviders',
+  'uploadflow','ragflow','authflow',
+  'docker','env','qa','cheatsheet'
+];
+const TITLES = [
+  'What is This Project','Architecture',
+  'Frontend (React + TS)','API Gateway (Node)','Data Models',
+  'Repository Parser','Embedding Service','RAG Chat Service',
+  'Documentation Service','Analysis Service',
+  'Common Module','ChromaDB Vector Store','LLM Providers',
+  'Repo Upload Flow','RAG Chat Flow','Auth & JWT',
+  'Docker & Services','Config & .env',
+  'Interview Q&A','Cheat Sheet'
+];
+
+let visited = new Set(['overview']);
+let current = 0;
+
+function show(id) {
+  const idx = SECTIONS.indexOf(id);
+  if (idx === -1) return;
+  current = idx;
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById('sec-' + id);
+  if (sec) sec.classList.add('active');
+  const navItems = document.querySelectorAll('.nav-item');
+  if (navItems[idx]) navItems[idx].classList.add('active');
+  document.getElementById('crumb-title').textContent = TITLES[idx];
+  visited.add(id);
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+function nextSection() {
+  if (current < SECTIONS.length - 1) show(SECTIONS[current + 1]);
+}
+function prevSection() {
+  if (current > 0) show(SECTIONS[current - 1]);
+}
+
+function updateProgress() {
+  const pct = Math.round((visited.size / SECTIONS.length) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = visited.size + ' / ' + SECTIONS.length + ' sections';
+  document.getElementById('progress-pct').textContent = pct + '%';
+}
+
+function toggleQA(el) {
+  el.parentElement.classList.toggle('open');
+}
+
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1500);
+  });
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowRight' || e.key === 'j') nextSection();
+  if (e.key === 'ArrowLeft'  || e.key === 'k') prevSection();
+});
+
+updateProgress();
+</script>
+</body>
+</html>

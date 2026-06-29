@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeInsight AI · 100 Interview Questions</title>
+<meta name="description" content="100 real interview questions and model answers covering the CodeInsight AI Copilot project — RAG, embeddings, microservices, FastAPI, React, JWT, ChromaDB and more.">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #07080e;
+  --bg2:      #0c0e19;
+  --bg3:      #121523;
+  --border:   #181d32;
+  --border2:  #1f2640;
+  --accent:   #7c6af7;
+  --accent2:  #5a49d6;
+  --accent-bg: rgba(124,106,247,0.07);
+  --accent-bg2: rgba(124,106,247,0.13);
+  --green:    #34d399;
+  --green-bg: rgba(52,211,153,0.08);
+  --amber:    #fbbf24;
+  --amber-bg: rgba(251,191,36,0.08);
+  --red:      #f87171;
+  --red-bg:   rgba(248,113,113,0.07);
+  --blue:     #60a5fa;
+  --blue-bg:  rgba(96,165,250,0.07);
+  --pink:     #f472b6;
+  --pink-bg:  rgba(244,114,182,0.07);
+  --cyan:     #22d3ee;
+  --cyan-bg:  rgba(34,211,238,0.07);
+  --orange:   #fb923c;
+  --orange-bg: rgba(251,146,60,0.08);
+  --text:     #e2e8f0;
+  --text2:    #94a3b8;
+  --text3:    #3d4a68;
+  --radius:   12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* Layout */
+.shell { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  padding: 1.5rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
+}
+.brand-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent-bg2); color: var(--accent);
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
+  padding: 3px 9px; border-radius: 20px; border: 1px solid rgba(124,106,247,0.3);
+  margin-bottom: 10px; letter-spacing: .07em;
+}
+.brand-badge::before { content: '◆'; font-size: 7px; }
+.brand-title { font-size: 18px; font-weight: 800; font-family: 'Syne', sans-serif; color: var(--text); }
+.brand-title span { color: var(--accent); }
+.brand-sub { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+
+.sidebar-stats {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.stat-box { background: var(--bg3); border-radius: 8px; padding: 8px 10px; }
+.stat-val { font-size: 20px; font-weight: 800; font-family: 'Syne', sans-serif; color: var(--accent); }
+.stat-lbl { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: .05em; }
+
+.sidebar-nav { padding: 0.75rem 0; flex: 1; }
+.nav-section { font-size: 9px; font-weight: 700; letter-spacing: .12em; color: var(--text3); text-transform: uppercase; padding: 12px 1.25rem 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 1.25rem; cursor: pointer; color: var(--text2);
+  font-size: 12.5px; font-weight: 500; transition: all .15s;
+  border-left: 2px solid transparent; text-decoration: none;
+}
+.nav-item:hover { color: var(--text); background: var(--bg3); }
+.nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-bg); }
+.nav-icon { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; background: var(--bg3); flex-shrink: 0; }
+.nav-item.active .nav-icon { background: var(--accent-bg2); }
+.nav-count { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); background: var(--bg3); padding: 1px 6px; border-radius: 10px; }
+
+/* Main */
+.main { flex: 1; min-width: 0; }
+.topbar {
+  padding: 0.9rem 2rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0;
+  background: rgba(7,8,14,0.93); backdrop-filter: blur(14px); z-index: 50;
+}
+.topbar-left { display: flex; flex-direction: column; }
+.topbar-crumb { font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+.topbar-crumb span { color: var(--accent); }
+.topbar-title { font-size: 15px; font-weight: 700; font-family: 'Syne', sans-serif; color: var(--text); margin-top: 2px; }
+.topbar-actions { display: flex; gap: 8px; align-items: center; }
+.search-box {
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 6px 12px; color: var(--text); font-size: 12px; font-family: 'Inter', sans-serif;
+  outline: none; width: 220px; transition: border-color .2s;
+}
+.search-box:focus { border-color: var(--accent); }
+.search-box::placeholder { color: var(--text3); }
+.btn-sm {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 5px 14px;
+  border-radius: 7px; border: 1px solid var(--border2); background: transparent;
+  color: var(--text2); cursor: pointer; transition: all .15s;
+}
+.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Content */
+.content { padding: 2rem 2.5rem; max-width: 900px; }
+.section { display: none; }
+.section.active { display: block; animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Section header */
+.section-header { margin-bottom: 1.75rem; }
+.section-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: .1em; margin-bottom: 6px; }
+.section-title { font-size: 30px; font-weight: 800; line-height: 1.15; color: var(--text); font-family: 'Syne', sans-serif; }
+.section-title span { color: var(--accent); }
+.section-desc { margin-top: 10px; font-size: 14px; color: var(--text2); max-width: 640px; line-height: 1.65; }
+
+/* Category badge */
+.cat-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px; border: 1px solid; letter-spacing: .06em;
+  margin-bottom: 1rem;
+}
+.cat-rag     { background: var(--accent-bg2); color: var(--accent); border-color: rgba(124,106,247,.3); }
+.cat-arch    { background: var(--blue-bg);   color: var(--blue);   border-color: rgba(96,165,250,.3); }
+.cat-python  { background: var(--green-bg);  color: var(--green);  border-color: rgba(52,211,153,.3); }
+.cat-react   { background: var(--cyan-bg);   color: var(--cyan);   border-color: rgba(34,211,238,.3); }
+.cat-auth    { background: var(--amber-bg);  color: var(--amber);  border-color: rgba(251,191,36,.3); }
+.cat-db      { background: var(--pink-bg);   color: var(--pink);   border-color: rgba(244,114,182,.3); }
+.cat-system  { background: var(--red-bg);    color: var(--red);    border-color: rgba(248,113,113,.3); }
+.cat-behave  { background: var(--orange-bg); color: var(--orange); border-color: rgba(251,146,60,.3); }
+
+/* Q&A Items */
+.qa-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.qa-item:hover { border-color: var(--border2); }
+.qa-item.open { border-color: rgba(124,106,247,.4); }
+
+.qa-q {
+  padding: 13px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: var(--bg2);
+  cursor: pointer;
+  transition: background .12s;
+  gap: 12px;
+}
+.qa-q:hover { background: var(--bg3); }
+.qa-item.open .qa-q { background: var(--bg3); }
+
+.qa-q-left { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
+.q-number {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--accent); background: var(--accent-bg2); padding: 2px 7px;
+  border-radius: 5px; flex-shrink: 0; margin-top: 1px;
+}
+.q-text { font-size: 13.5px; font-weight: 600; color: var(--text); line-height: 1.5; }
+.q-diff {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+  padding: 2px 7px; border-radius: 20px; flex-shrink: 0; margin-top: 2px; letter-spacing: .04em;
+}
+.diff-easy   { background: var(--green-bg); color: var(--green); }
+.diff-medium { background: var(--amber-bg); color: var(--amber); }
+.diff-hard   { background: var(--red-bg);   color: var(--red); }
+
+.qa-arrow { color: var(--text3); font-size: 13px; transition: transform .2s; flex-shrink: 0; margin-top: 2px; }
+.qa-item.open .qa-arrow { transform: rotate(90deg); color: var(--accent); }
+
+.qa-a {
+  display: none;
+  padding: 16px 18px;
+  font-size: 13.5px;
+  color: var(--text2);
+  line-height: 1.75;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.qa-item.open .qa-a { display: block; animation: fadeIn .15s ease; }
+
+.qa-a p { margin-bottom: 0.75rem; }
+.qa-a p:last-child { margin-bottom: 0; }
+.qa-a strong { color: var(--text); }
+.qa-a code { background: var(--bg3); padding: 1px 5px; border-radius: 4px; font-size: 12px; color: var(--accent); font-family: 'JetBrains Mono', monospace; border: 1px solid var(--border2); }
+.qa-a ul, .qa-a ol { padding-left: 1.2rem; }
+.qa-a li { margin-bottom: 5px; }
+.qa-a .tip { background: var(--green-bg); border-left: 3px solid var(--green); border-radius: 7px; padding: 8px 12px; font-size: 13px; color: #6ee7b7; margin-top: 10px; }
+.qa-a .tip strong { color: #6ee7b7; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 4px; }
+.qa-a .warn { background: var(--amber-bg); border-left: 3px solid var(--amber); border-radius: 7px; padding: 8px 12px; font-size: 13px; color: #fde68a; margin-top: 10px; }
+
+/* Progress */
+.progress-wrap { background: var(--bg3); border-radius: 4px; height: 4px; margin: 1rem 0 0.5rem; }
+.progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--pink)); transition: width .5s ease; }
+.progress-lbl { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; display: flex; justify-content: space-between; }
+
+/* Search results */
+.no-results { text-align: center; padding: 3rem; color: var(--text3); font-family: 'Syne', sans-serif; font-size: 16px; }
+
+/* Expand all btn */
+.section-actions { display: flex; gap: 8px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+.action-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 4px 12px;
+  border-radius: 6px; border: 1px solid var(--border2); background: transparent;
+  color: var(--text3); cursor: pointer; transition: all .15s;
+}
+.action-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .content { padding: 1.5rem 1rem; }
+  .search-box { width: 160px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-badge">INTERVIEW PREP</div>
+    <div class="brand-title">100 <span>Questions</span></div>
+    <div class="brand-sub">CodeInsight AI Project</div>
+  </div>
+  <div class="sidebar-stats">
+    <div class="stat-box"><div class="stat-val">100</div><div class="stat-lbl">TOTAL Q&amp;A</div></div>
+    <div class="stat-box"><div class="stat-val">10</div><div class="stat-lbl">CATEGORIES</div></div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Questions by Topic</div>
+    <a class="nav-item active" onclick="show('rag')"><div class="nav-icon">🧠</div>RAG & AI Pipeline<span class="nav-count">12</span></a>
+    <a class="nav-item" onclick="show('embeddings')"><div class="nav-icon">📐</div>Embeddings & Vectors<span class="nav-count">10</span></a>
+    <a class="nav-item" onclick="show('architecture')"><div class="nav-icon">🏗</div>System Architecture<span class="nav-count">10</span></a>
+    <a class="nav-item" onclick="show('parser')"><div class="nav-icon">🔍</div>Code Parsing & AST<span class="nav-count">10</span></a>
+    <a class="nav-item" onclick="show('streaming')"><div class="nav-icon">⚡</div>Streaming & SSE<span class="nav-count">8</span></a>
+    <a class="nav-item" onclick="show('auth')"><div class="nav-icon">🔐</div>Auth & Security<span class="nav-count">10</span></a>
+    <a class="nav-item" onclick="show('database')"><div class="nav-icon">🗄</div>Databases<span class="nav-count">10</span></a>
+    <a class="nav-item" onclick="show('frontend')"><div class="nav-icon">⚛</div>React & Frontend<span class="nav-count">10</span></a>
+    <a class="nav-item" onclick="show('system')"><div class="nav-icon">🐳</div>Docker & DevOps<span class="nav-count">10</span></a>
+    <a class="nav-item" onclick="show('behavioral')"><div class="nav-icon">💬</div>Behavioral (STAR)<span class="nav-count">10</span></a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-crumb">CodeInsight AI › <span id="crumb-title">RAG & AI Pipeline</span></div>
+      <div class="topbar-title" id="topbar-title">RAG & AI Pipeline — 12 Questions</div>
+    </div>
+    <div class="topbar-actions">
+      <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search questions..." oninput="handleSearch()" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="content" id="mainContent">
+
+    <!-- ════════ RAG ════════ -->
+    <div class="section active" id="sec-rag">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 1 · 12 QUESTIONS</div>
+        <div class="section-title">RAG & <span>AI Pipeline</span></div>
+        <div class="section-desc">Questions about the Retrieval-Augmented Generation architecture, retrieval quality, prompt construction, and AI pipeline design decisions.</div>
+      </div>
+      <div class="section-actions">
+        <button class="action-btn" onclick="expandAll('rag')">Expand All</button>
+        <button class="action-btn" onclick="collapseAll('rag')">Collapse All</button>
+      </div>
+
+      <div class="qa-item" id="rag-1">
+        <div class="qa-q" onclick="toggle('rag-1')">
+          <div class="qa-q-left">
+            <div class="q-number">Q1</div>
+            <div class="q-text">What is RAG and why did you use it instead of fine-tuning an LLM?</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <span class="q-diff diff-easy">EASY</span>
+            <span class="qa-arrow">›</span>
+          </div>
+        </div>
+        <div class="qa-a">
+          <p><strong>RAG (Retrieval-Augmented Generation)</strong> is an architecture that retrieves relevant documents from an external knowledge store at query time and injects them into the LLM's prompt as context, enabling the model to answer questions about private, up-to-date, or domain-specific knowledge it wasn't trained on.</p>
+          <p>I chose RAG over fine-tuning for several reasons: <strong>Fine-tuning</strong> requires expensive GPU compute, retraining every time the codebase changes, and risks "forgetting" general reasoning capabilities (catastrophic forgetting). RAG is <strong>updateable</strong> in real-time — indexing a new repository just runs the embedding pipeline. Fine-tuning also can't cite specific file and line numbers; RAG returns the actual chunks used, enabling source citations in the UI.</p>
+          <div class="tip"><strong>💡 Key phrase</strong> Say: "RAG gave me grounded, verifiable answers with citations, while fine-tuning would require retraining every time the codebase changed."</div>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-2">
+        <div class="qa-q" onclick="toggle('rag-2')">
+          <div class="qa-q-left"><div class="q-number">Q2</div><div class="q-text">Walk me through the complete RAG pipeline in your project from user question to displayed answer.</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p>1. <strong>User types a question</strong> in the React chat panel. The frontend sends a POST to <code>/api/repositories/:id/chat</code> on the Node gateway.</p>
+          <p>2. <strong>Gateway proxies</strong> to the RAG service (<code>http://rag-service:8103</code>).</p>
+          <p>3. <strong>Query embedding</strong>: The RAG service calls <code>embed_texts([query])</code> to convert the question to a 384-dim vector using <code>all-MiniLM-L6-v2</code>.</p>
+          <p>4. <strong>Vector retrieval</strong>: <code>query_chunks(repo_id, embedding, 8)</code> queries ChromaDB's HNSW index, returning the 8 most semantically similar code chunks.</p>
+          <p>5. <strong>Prompt construction</strong>: <code>_build_prompt()</code> injects the 8 chunks as numbered context blocks into the LLM prompt.</p>
+          <p>6. <strong>LLM streaming</strong>: <code>stream_complete(prompt)</code> calls Groq/Gemini/OpenRouter and yields tokens via SSE.</p>
+          <p>7. <strong>Client rendering</strong>: React appends each token to the message as it arrives. After <code>event: done</code>, citations (file paths + line ranges) are displayed.</p>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-3">
+        <div class="qa-q" onclick="toggle('rag-3')">
+          <div class="qa-q-left"><div class="q-number">Q3</div><div class="q-text">How does vector similarity search work and why is cosine distance used?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p>Vector similarity search finds the vectors in a database closest to a query vector. <strong>Cosine distance</strong> measures the angle between two vectors: <code>cosine_similarity = (A · B) / (|A| × |B|)</code>. Two vectors pointing in the same direction have cosine similarity 1 (identical meaning); perpendicular vectors score 0; opposite score -1.</p>
+          <p>When we normalize embeddings (divide by their magnitude), all vectors have length 1. This means <strong>cosine similarity equals dot product</strong> for normalized vectors — a much cheaper operation. ChromaDB uses HNSW (Hierarchical Navigable Small World) graphs to find approximate nearest neighbors in O(log N) time rather than brute-force O(N).</p>
+          <p>I use <code>normalize_embeddings=True</code> in <code>embed_texts()</code> specifically to enable this optimization.</p>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-4">
+        <div class="qa-q" onclick="toggle('rag-4')">
+          <div class="qa-q-left"><div class="q-number">Q4</div><div class="q-text">Why retrieve 8 chunks? How did you decide the optimal retrieval count?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p>8 is a heuristic tradeoff. Each code chunk is ~120 lines ≈ 1,500-2,000 tokens. With 8 chunks, the context portion of the prompt is ~12,000-16,000 tokens — well within Groq Llama-3's 32K context window while leaving room for the question and system prompt.</p>
+          <p>Retrieving fewer chunks risks missing relevant code. Retrieving more dilutes the context with less relevant chunks, which can confuse the LLM and increase cost. For production, I'd tune this empirically using precision@k metrics.</p>
+          <div class="tip"><strong>💡 Follow-up answer</strong> "In production I'd implement retrieval evaluation using a test set of questions with known relevant chunks, measuring Precision@8, Recall@8, and Mean Reciprocal Rank (MRR)."</div>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-5">
+        <div class="qa-q" onclick="toggle('rag-5')">
+          <div class="qa-q-left"><div class="q-number">Q5</div><div class="q-text">How does your prompt prevent the LLM from hallucinating answers?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p>The prompt explicitly instructs: <em>"Answer the developer's repository question using <strong>only</strong> the retrieved code context. Be specific, cite file paths and line ranges, and <strong>call out uncertainty</strong>."</em></p>
+          <p>Three mechanisms prevent hallucination: (1) The word "only" grounds the model in provided context. (2) Asking for file:line citations means the model must point to real chunks — it can't fabricate a fictional file path. (3) "Call out uncertainty" instructs the model to say "I don't see this in the context" rather than guessing, which is a valid and honest response for a code assistant.</p>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-6">
+        <div class="qa-q" onclick="toggle('rag-6')">
+          <div class="qa-q-left"><div class="q-number">Q6</div><div class="q-text">What is the difference between RAG and traditional keyword search?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p><strong>Keyword search (BM25/TF-IDF)</strong> matches documents containing the exact query words. It's fast but semantically shallow — "extract Python functions" won't find code with <code>ast.FunctionDef</code> if those exact words don't appear.</p>
+          <p><strong>Vector search (RAG)</strong> embeds both query and documents into semantic space. Semantically related text clusters together regardless of word choice. "Extract Python functions" will retrieve <code>ast.FunctionDef</code> chunks because both concepts live near each other in embedding space.</p>
+          <p>For an ideal system, <strong>hybrid search</strong> combines both: keyword search for exact identifiers (class names, function names) and vector search for semantic queries.</p>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-7">
+        <div class="qa-q" onclick="toggle('rag-7')">
+          <div class="qa-q-left"><div class="q-number">Q7</div><div class="q-text">How do citations work in your system? How are they associated with the LLM answer?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p>After the last LLM token streams, the RAG service sends a custom SSE event: <code>event: citations\ndata: [...]</code> containing the <code>filePath</code>, <code>startLine</code>, and <code>endLine</code> for each of the 8 retrieved chunks (not just the ones the LLM referenced).</p>
+          <p>The client's SSE listener handles the <code>citations</code> event type separately: it appends the citations array to the last assistant message object, which the UI renders as clickable source links below the answer.</p>
+          <div class="warn"><strong>⚠️ Limitation</strong> The system shows all retrieved chunks as citations, not just those the LLM actually cited. A more precise system would parse the LLM's [1], [2] references and map them back to specific chunks.</div>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-8">
+        <div class="qa-q" onclick="toggle('rag-8')">
+          <div class="qa-q-left"><div class="q-number">Q8</div><div class="q-text">What is the offline/mock mode and why is it important?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p>When <code>LLM_PROVIDER</code> is not set or no API key is available, <code>llm.py</code> falls back to <code>_offline_answer()</code>, which returns the retrieved context itself as the "answer" — essentially showing the user the raw code chunks that would have been sent to the LLM.</p>
+          <p>This is crucial for development: it lets me test the entire parsing, embedding, and retrieval pipeline without any API keys or internet connection. I can verify that the right chunks are being retrieved before integrating the LLM. It also means the project can be run and demonstrated without any paid API access.</p>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-9">
+        <div class="qa-q" onclick="toggle('rag-9')">
+          <div class="qa-q-left"><div class="q-number">Q9</div><div class="q-text">How would you improve retrieval quality? What are the limitations of the current approach?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p><strong>Current limitations:</strong> (1) Pure vector search misses exact identifier matches. (2) Chunk boundaries can split context awkwardly. (3) No query expansion or reformulation. (4) Retrieved chunks aren't re-ranked for quality.</p>
+          <p><strong>Improvements I'd make:</strong></p>
+          <ul>
+            <li><strong>Hybrid search:</strong> Combine BM25 (keyword) with vector search via Reciprocal Rank Fusion</li>
+            <li><strong>Cross-encoder re-ranking:</strong> Use a model like ms-marco-MiniLM to score all 20 candidates and return the best 8</li>
+            <li><strong>HyDE (Hypothetical Document Embeddings):</strong> Generate a hypothetical code answer, embed it, then search — often retrieves better results</li>
+            <li><strong>Parent chunk retrieval:</strong> Store small chunks for precise retrieval but return their parent (larger context) to the LLM</li>
+            <li><strong>Query decomposition:</strong> For complex questions, decompose into sub-queries and merge results</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-10">
+        <div class="qa-q" onclick="toggle('rag-10')">
+          <div class="qa-q-left"><div class="q-number">Q10</div><div class="q-text">Why does the embedding service prepend file path and language to each chunk before embedding?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p>Prepending <code>"file: services/rag-service/main.py\nlanguage: Python\nsymbol: chat_stream\n"</code> before the source code enriches the semantic signal the model encodes.</p>
+          <p>When a user queries "Python streaming endpoint", the query embedding will land near vectors that include the word "Python" and "stream" in their metadata prefix — even if the code itself doesn't contain those exact words. It's metadata-augmented semantic indexing: you're teaching the model to associate file paths and languages with specific code patterns.</p>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-11">
+        <div class="qa-q" onclick="toggle('rag-11')">
+          <div class="qa-q-left"><div class="q-number">Q11</div><div class="q-text">What is the OpenAI-compatible API format and how does it work in your LLM abstraction?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p>OpenAI's Chat Completions API has become an industry standard. The request format is: <code>{"model": "...", "stream": true, "messages": [{"role": "system", "content": "..."}, {"role": "user", "content": "..."}]}</code>. The streaming response sends <code>data: {"choices":[{"delta":{"content":"token"}}]}</code> lines.</p>
+          <p>Groq and OpenRouter both implement this exact format. My <code>_stream_openai_compatible()</code> function works for both — the only differences are the URL and API key. This is the Strategy Pattern: one implementation, multiple providers, swapped via config.</p>
+          <p>Gemini uses a different format (<code>generativelanguage.googleapis.com</code> REST API), so it has its own <code>_complete_gemini()</code> implementation that makes a blocking call and yields the full response as one token.</p>
+        </div>
+      </div>
+
+      <div class="qa-item" id="rag-12">
+        <div class="qa-q" onclick="toggle('rag-12')">
+          <div class="qa-q-left"><div class="q-number">Q12</div><div class="q-text">How would you evaluate the quality of your RAG system?</div></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div>
+        </div>
+        <div class="qa-a">
+          <p><strong>Retrieval metrics:</strong> Create a golden dataset of questions + known relevant chunks. Measure Precision@k (what fraction of retrieved chunks are relevant), Recall@k (what fraction of relevant chunks were retrieved), and MRR (Mean Reciprocal Rank).</p>
+          <p><strong>Generation metrics:</strong> Use frameworks like RAGAS (RAG Assessment): Faithfulness (does the answer contradict the context?), Answer Relevancy (does it answer the question?), Context Precision, Context Recall.</p>
+          <p><strong>End-to-end metrics:</strong> Human evaluation on a test set, A/B testing between retrieval strategies, tracking citation accuracy (do cited line numbers actually contain the referenced code?).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ EMBEDDINGS ════════ -->
+    <div class="section" id="sec-embeddings">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 2 · 10 QUESTIONS</div>
+        <div class="section-title">Embeddings & <span>Vectors</span></div>
+        <div class="section-desc">Deep-dive questions on sentence transformers, vector dimensions, ChromaDB indexing, and embedding quality.</div>
+      </div>
+      <div class="section-actions">
+        <button class="action-btn" onclick="expandAll('embeddings')">Expand All</button>
+        <button class="action-btn" onclick="collapseAll('embeddings')">Collapse All</button>
+      </div>
+
+      <div class="qa-item" id="emb-1"><div class="qa-q" onclick="toggle('emb-1')"><div class="qa-q-left"><div class="q-number">Q13</div><div class="q-text">What is a sentence transformer and how does it produce embeddings?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>A <strong>sentence transformer</strong> is a BERT-based neural network fine-tuned with a Siamese/triplet network objective: similar sentence pairs are trained to produce nearby embeddings, dissimilar pairs produce distant embeddings (contrastive learning).</p><p>The process: tokenize input text → pass through transformer layers (6 layers for MiniLM) → mean pool the token embeddings to get a fixed-size sentence vector → optionally L2-normalize. The result is a dense vector where geometric proximity corresponds to semantic similarity.</p><p><code>all-MiniLM-L6-v2</code> is a 22M parameter distilled model: fast on CPU (~5ms per text), 384-dim output, trained on 1B+ sentence pairs from web + scientific text.</p></div></div>
+
+      <div class="qa-item" id="emb-2"><div class="qa-q" onclick="toggle('emb-2')"><div class="qa-q-left"><div class="q-number">Q14</div><div class="q-text">Why 384 dimensions? What's the tradeoff between embedding dimension size?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>384 is the native output dimension of <code>all-MiniLM-L6-v2</code>. The tradeoff: <strong>higher dimensions</strong> (768, 1536) can encode more fine-grained semantic distinctions but require more storage (2× the bytes per vector), slower ANN indexing, and are prone to the "curse of dimensionality" where distances become less meaningful in very high-D space. <strong>Lower dimensions</strong> are faster and cheaper but lose nuance.</p><p>For code search, 384 dimensions is a practical sweet spot — sufficient for distinguishing between different code concepts while remaining fast enough for real-time retrieval. Production systems like OpenAI's <code>text-embedding-3-small</code> offer 1536 dims but allow truncation to 256 for speed.</p></div></div>
+
+      <div class="qa-item" id="emb-3"><div class="qa-q" onclick="toggle('emb-3')"><div class="qa-q-left"><div class="q-number">Q15</div><div class="q-text">How does the @lru_cache singleton pattern work for the embedding model?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>@lru_cache(maxsize=1)</code> is Python's built-in memoization decorator. The first call to <code>_load_sentence_transformer()</code> executes the function body (loads the model) and caches the result. All subsequent calls return the cached object without re-executing — effectively a singleton.</p><p><code>maxsize=1</code> means the cache holds at most 1 entry. Since the function takes no arguments (the model name is read from env inside), the cache key is always the same empty tuple <code>()</code>. The model is loaded once at first request and persists for the lifetime of the process. This avoids loading 80MB from disk on every request.</p></div></div>
+
+      <div class="qa-item" id="emb-4"><div class="qa-q" onclick="toggle('emb-4')"><div class="qa-q-left"><div class="q-number">Q16</div><div class="q-text">Explain the hash embedding fallback. Is it really useful?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The <code>_hash_embedding()</code> function creates a deterministic 384-dim vector by: tokenizing text by whitespace → SHA-256 hashing each token → using the first 4 bytes as a vector index → incrementing <code>vector[index] += 1.0</code> → L2-normalizing the result.</p><p>It's a <strong>bag-of-words approximation</strong>: same tokens → same vector positions incremented. It's NOT semantic (synonyms produce completely different vectors), but it's deterministic — the same text always produces the same vector, so the database is consistent. For offline development, you can index and retrieve documents, but query results will be essentially random. The real value is making the system runnable and demonstrable with zero ML dependencies.</p></div></div>
+
+      <div class="qa-item" id="emb-5"><div class="qa-q" onclick="toggle('emb-5')"><div class="qa-q-left"><div class="q-number">Q17</div><div class="q-text">What is HNSW and how does ChromaDB use it for ANN search?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>HNSW (Hierarchical Navigable Small World)</strong> is a graph-based Approximate Nearest Neighbor index. It builds a multi-layer graph where each node connects to its nearest neighbors at different resolutions. Higher layers have sparser, long-range connections (for coarse navigation); lower layers have dense, local connections (for fine-grained search).</p><p>Query time: Start at the entry point in the top layer, greedily navigate to the nearest neighbor in that layer, descend, repeat until the bottom layer. This finds approximate nearest neighbors in O(log N) time vs O(N×d) for brute force. ChromaDB uses HNSW via its <code>hnswlib</code> backend. The tradeoff: ANN means results are "good enough" but may miss the true nearest neighbor — acceptable for semantic search where approximate results are often equally useful.</p></div></div>
+
+      <div class="qa-item" id="emb-6"><div class="qa-q" onclick="toggle('emb-6')"><div class="qa-q-left"><div class="q-number">Q18</div><div class="q-text">Why does each repository get its own ChromaDB collection?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Collection isolation provides: (1) <strong>Clean deletion</strong> — deleting a repository deletes its entire collection without touching others. (2) <strong>No cross-repo contamination</strong> — queries return chunks only from the target repository, not from other users' repos. (3) <strong>Independent scaling</strong> — collections can be sharded independently. (4) <strong>Tenant isolation</strong> — in multi-user scenarios, users can't accidentally retrieve code from other users' repositories.</p><p>The alternative (one collection + metadata filter) would require querying all vectors then filtering — slower and harder to delete.</p></div></div>
+
+      <div class="qa-item" id="emb-7"><div class="qa-q" onclick="toggle('emb-7')"><div class="qa-q-left"><div class="q-number">Q19</div><div class="q-text">What is the difference between all-MiniLM-L6-v2 and CodeBERT? When would you use each?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>all-MiniLM-L6-v2</strong>: 22M params, 384-dim, trained on general text including technical content. Fast on CPU. Best for natural-language-to-code search (user asks in English, finds relevant code).</p><p><strong>CodeBERT</strong>: 125M params, 768-dim, pre-trained on CodeSearchNet corpus (6 programming languages: Python, Java, JS, PHP, Ruby, Go). Best for code-to-code similarity and cross-language code search, but slower and larger memory footprint.</p><p>For CodeInsight's primary use case (NL questions → code answers), MiniLM's speed advantage with acceptable quality makes it the better default. CodeBERT would shine if the use case were "find me code similar to this snippet."</p></div></div>
+
+      <div class="qa-item" id="emb-8"><div class="qa-q" onclick="toggle('emb-8')"><div class="qa-q-left"><div class="q-number">Q20</div><div class="q-text">How is the ChromaDB upsert operation idempotent?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Idempotent</strong> means calling the operation multiple times has the same result as calling it once. ChromaDB's <code>upsert()</code> (unlike <code>add()</code>) will <em>insert</em> a document if its ID doesn't exist, or <em>update</em> it if it does — never creating duplicates.</p><p>The chunk IDs are SHA-1 hashes of <code>{file_path}:{start}:{end}:{content[:80]}</code>. If you re-index the same file, the same hash is produced → the upsert updates the existing vector → no duplicates. This means you can safely re-run the embedding pipeline after code changes — modified functions get updated vectors, unchanged functions are a no-op.</p></div></div>
+
+      <div class="qa-item" id="emb-9"><div class="qa-q" onclick="toggle('emb-9')"><div class="qa-q-left"><div class="q-number">Q21</div><div class="q-text">What does normalize_embeddings=True do mathematically?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>L2 normalization divides each vector by its Euclidean norm: <code>v_normalized = v / ||v||₂</code>. This projects all vectors onto the surface of a unit hypersphere (all vectors have length 1).</p><p>The mathematical consequence: for unit vectors, <code>cosine_similarity(A, B) = A · B / (|A| × |B|) = A · B</code> (since |A| = |B| = 1). So cosine similarity becomes a simple dot product — one multiply-accumulate operation per dimension instead of two (dot product + two norm computations). This makes distance computation significantly faster, enabling ChromaDB's HNSW to use inner product metric instead of the more expensive cosine metric.</p></div></div>
+
+      <div class="qa-item" id="emb-10"><div class="qa-q" onclick="toggle('emb-10')"><div class="qa-q-left"><div class="q-number">Q22</div><div class="q-text">How would you handle embedding model updates without re-indexing everything?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Changing the embedding model invalidates all stored vectors (a 384-dim MiniLM vector is incompatible with a 768-dim CodeBERT vector — they can't be compared). This is a major operational challenge called <strong>embedding drift</strong>.</p><p>Strategies: (1) <strong>Version collections</strong>: store model name/version in collection metadata, query only same-version collections. (2) <strong>Dual indexing</strong>: run old and new models in parallel during migration, gradually deprecate old. (3) <strong>Background re-indexing</strong>: on model update, queue all repositories for re-embedding without downtime. (4) <strong>Pinning</strong>: pin the model version in config and only update with a planned migration job. In CodeInsight, I'd store the model name alongside each collection and refuse to query if the current model differs from the stored model name.</p></div></div>
+    </div>
+
+    <!-- ════════ ARCHITECTURE ════════ -->
+    <div class="section" id="sec-architecture">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 3 · 10 QUESTIONS</div>
+        <div class="section-title">System <span>Architecture</span></div>
+        <div class="section-desc">Questions on microservices design, the API gateway pattern, inter-service communication, and architectural tradeoffs.</div>
+      </div>
+      <div class="section-actions"><button class="action-btn" onclick="expandAll('architecture')">Expand All</button><button class="action-btn" onclick="collapseAll('architecture')">Collapse All</button></div>
+
+      <div class="qa-item" id="arch-1"><div class="qa-q" onclick="toggle('arch-1')"><div class="qa-q-left"><div class="q-number">Q23</div><div class="q-text">Why use an API Gateway pattern instead of having the client call Python services directly?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The API Gateway (Node/Express) provides: (1) <strong>Single entry point</strong> — client only needs one URL, not 5 different Python service URLs. (2) <strong>Authentication</strong> — JWT verification in one place instead of in every Python service. (3) <strong>Authorization</strong> — ownership checks (this repo belongs to this user) happen before proxying. (4) <strong>Request routing</strong> — the gateway decides which service to call based on the route. (5) <strong>Protocol translation</strong> — the gateway handles file uploads (multipart/form-data) from the client and translates them to JSON payloads for Python services. (6) <strong>CORS</strong> — handle cross-origin in one place.</p></div></div>
+
+      <div class="qa-item" id="arch-2"><div class="qa-q" onclick="toggle('arch-2')"><div class="qa-q-left"><div class="q-number">Q24</div><div class="q-text">How does the repository processing pipeline work as a state machine?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The repository's <code>status</code> field acts as a finite state machine: <code>queued → parsing → embedding → ready</code> (or <code>failed</code> at any step). Each transition is a MongoDB update: when the gateway starts calling the parser, it sets <code>status: "parsing"</code>; when the parser responds successfully, it sets <code>status: "embedding"</code>; after ChromaDB indexing completes, it sets <code>status: "ready"</code>.</p><p>The React client polls <code>GET /api/repositories/:id</code> every few seconds and updates the UI based on the status field. When status reaches <code>ready</code>, polling stops and the chat interface unlocks. If any step throws, status is set to <code>failed</code> with the error in <code>lastError</code>.</p></div></div>
+
+      <div class="qa-item" id="arch-3"><div class="qa-q" onclick="toggle('arch-3')"><div class="qa-q-left"><div class="q-number">Q25</div><div class="q-text">What is the shared common module pattern and why is it better than duplicating code?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The <code>services/common/</code> directory contains <code>embeddings.py</code>, <code>llm.py</code>, <code>vector_store.py</code>, and <code>models.py</code>. In <code>docker-compose.yml</code>, this directory is bind-mounted into every Python service container, and each Dockerfile adds it to <code>PYTHONPATH</code>. Any service can then do <code>from common.embeddings import embed_texts</code>.</p><p>Without this pattern: every service would copy-paste the embedding code, and fixing a bug in <code>embed_texts</code> would require changing 5 files. The shared module means one fix propagates everywhere — this is the DRY (Don't Repeat Yourself) principle applied at the service level.</p></div></div>
+
+      <div class="qa-item" id="arch-4"><div class="qa-q" onclick="toggle('arch-4')"><div class="qa-q-left"><div class="q-number">Q26</div><div class="q-text">What are the tradeoffs of synchronous vs asynchronous repository processing?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Current approach (synchronous):</strong> The gateway makes a blocking HTTP POST to the parser, waits for the response (which can take 30-120 seconds for large repos), then calls the embedding service, waits again, then updates MongoDB. During this time, the HTTP connection is held open.</p><p><strong>Problem:</strong> HTTP connections have timeouts. Large repos can exceed Nginx/load-balancer timeouts (typically 60-120s). The gateway process is blocked, consuming a thread/connection slot.</p><p><strong>Better approach (async with queue):</strong> The gateway immediately returns <code>202 Accepted</code> with a job ID. A background worker (Celery + Redis, or BullMQ) picks up the job and runs parse→embed. The client polls for status. This is much more scalable and production-appropriate.</p></div></div>
+
+      <div class="qa-item" id="arch-5"><div class="qa-q" onclick="toggle('arch-5')"><div class="qa-q-left"><div class="q-number">Q27</div><div class="q-text">How does Docker Compose networking work between services?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Docker Compose creates a default bridge network for all services in the same <code>docker-compose.yml</code>. Each service is assigned a DNS name equal to its <code>service name</code> in the YAML. Services communicate using these DNS names as hostnames: <code>http://repository-parser:8101</code>, <code>http://rag-service:8103</code>.</p><p>Docker's embedded DNS resolver maps service names to the container's current IP. This is dynamic — if a container restarts and gets a new IP, the DNS name still works. <code>localhost</code> inside a container refers only to that container, NOT to other containers or the host machine.</p></div></div>
+
+      <div class="qa-item" id="arch-6"><div class="qa-q" onclick="toggle('arch-6')"><div class="qa-q-left"><div class="q-number">Q28</div><div class="q-text">Why was Node.js chosen for the gateway instead of Python FastAPI?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Node.js + TypeScript excels at the gateway's specific workload: (1) <strong>Non-blocking I/O</strong> — Node handles many concurrent HTTP connections efficiently, ideal for an API gateway that mostly proxies requests. (2) <strong>Mongoose</strong> — MongoDB's most mature and feature-rich ODM is in the Node ecosystem. (3) <strong>TypeScript</strong> — shared type definitions with the React client means the same <code>Repository</code> interface is used in both places. (4) <strong>Familiarity</strong> — the npm ecosystem has excellent libraries for JWT (jsonwebtoken), bcrypt, file uploads (multer), and CORS.</p><p>A Python FastAPI gateway would work too, but would lose TypeScript type sharing with the frontend and has a less mature MongoDB ODM.</p></div></div>
+
+      <div class="qa-item" id="arch-7"><div class="qa-q" onclick="toggle('arch-7')"><div class="qa-q-left"><div class="q-number">Q29</div><div class="q-text">How does the architecture handle failure — what happens if the embedding service crashes during indexing?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Currently: the gateway's <code>try/catch</code> around the embedding service HTTP call catches the error and sets <code>status: "failed"</code> + <code>lastError: errorMessage</code> in MongoDB. The client displays the error. No automatic retry exists.</p><p><strong>Production improvement:</strong> Implement idempotent retry with exponential backoff. Since the embedding step uses <code>upsert()</code> (not <code>add()</code>), re-running it on the same data is safe — already-indexed chunks are updated, not duplicated. A job queue would handle retries automatically, track attempt counts, and dead-letter queue permanently failing jobs for human inspection.</p></div></div>
+
+      <div class="qa-item" id="arch-8"><div class="qa-q" onclick="toggle('arch-8')"><div class="qa-q-left"><div class="q-number">Q30</div><div class="q-text">What is the Vite dev proxy and why is it needed?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>In development, the React app runs on <code>localhost:5173</code> (Vite) and the Node gateway on <code>localhost:8080</code>. Direct browser requests from <code>:5173</code> to <code>:8080</code> would be blocked by CORS (different origins).</p><p>The Vite proxy (<code>vite.config.ts</code>: <code>"/api" → "http://localhost:8080"</code>) makes the browser believe all requests go to the same origin. Vite's dev server intercepts any request to <code>/api/*</code> and forwards it to port 8080 — so from the browser's perspective, it's talking to <code>localhost:5173/api</code> (no CORS). This is purely a development convenience; in production (Docker), React is served by the same gateway or a CDN.</p></div></div>
+
+      <div class="qa-item" id="arch-9"><div class="qa-q" onclick="toggle('arch-9')"><div class="qa-q-left"><div class="q-number">Q31</div><div class="q-text">How would you scale this system to handle 10,000 concurrent users?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Horizontal scaling per bottleneck:</strong></p><ul><li><strong>RAG/Embedding services:</strong> Stateless — scale horizontally with Kubernetes pods behind a load balancer. Model loaded per pod instance.</li><li><strong>Parser service:</strong> CPU-intensive — scale with a job queue (Celery workers), auto-scale workers based on queue depth.</li><li><strong>ChromaDB:</strong> Scale with ChromaDB's distributed mode or migrate to Pinecone/Weaviate for managed vector search.</li><li><strong>MongoDB:</strong> Replica sets for read scaling, sharding for write scaling.</li><li><strong>Node gateway:</strong> Stateless — scale horizontally, JWT verification needs no shared state.</li><li><strong>LLM:</strong> Rate limit per user, queue long-running requests, cache common query embeddings in Redis.</li></ul></div></div>
+
+      <div class="qa-item" id="arch-10"><div class="qa-q" onclick="toggle('arch-10')"><div class="qa-q-left"><div class="q-number">Q32</div><div class="q-text">What is the Repository Analysis Pydantic model and why is it the central data contract?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>RepositoryAnalysis</code> is the Pydantic model returned by the parser service and consumed by the embedding, documentation, and analysis services. It contains: <code>repositoryId</code>, <code>files</code> (list of RepositoryFile), <code>chunks</code> (list of CodeChunk), <code>symbols</code> (list of CodeSymbol), <code>dependencies</code> (list of DependencyEdge), <code>summary</code> (dict).</p><p>It's the central contract because Pydantic validates the data on both sides (parser output, service input) — any mismatch fails with a clear validation error, not a runtime KeyError. FastAPI automatically serializes/deserializes Pydantic models to/from JSON, making it the API contract between services. It's stored in MongoDB (as Mixed type) so it can be served to the client for architecture visualization without re-calling the parser.</p></div></div>
+    </div>
+
+    <!-- ════════ PARSER ════════ -->
+    <div class="section" id="sec-parser">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 4 · 10 QUESTIONS</div>
+        <div class="section-title">Code Parsing <span>& AST</span></div>
+        <div class="section-desc">Questions on repository parsing, abstract syntax trees, code chunking, symbol extraction, and dependency graph construction.</div>
+      </div>
+      <div class="section-actions"><button class="action-btn" onclick="expandAll('parser')">Expand All</button><button class="action-btn" onclick="collapseAll('parser')">Collapse All</button></div>
+
+      <div class="qa-item" id="par-1"><div class="qa-q" onclick="toggle('par-1')"><div class="qa-q-left"><div class="q-number">Q33</div><div class="q-text">What is an AST and why is it better than regex for Python symbol extraction?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>An <strong>Abstract Syntax Tree</strong> is a tree representation of code's grammatical structure. Python's <code>ast.parse(source)</code> produces a tree of nodes like <code>Module → FunctionDef → arguments → body</code>. Each node has <code>lineno</code> and <code>end_lineno</code> attributes giving exact line coordinates.</p><p>AST is better than regex because: (1) it's grammar-aware — handles decorators, nested functions, async functions, lambda expressions that break regex. (2) it provides exact <code>end_lineno</code> (where the function ends) which regex can't reliably determine. (3) it's language-validated — if <code>ast.parse()</code> succeeds, the code is syntactically valid Python. Regex can match false positives in strings/comments.</p></div></div>
+
+      <div class="qa-item" id="par-2"><div class="qa-q" onclick="toggle('par-2')"><div class="qa-q-left"><div class="q-number">Q34</div><div class="q-text">How does the two-pass chunking strategy work?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Pass 1 (Symbol-level):</strong> For each detected symbol (function, class), create a chunk covering exactly that symbol's line range. Symbol-level chunks have rich semantic signal — the embedding captures the full function in context.</p><p><strong>Pass 2 (Sliding window):</strong> For files with no symbols (config files, plain scripts) or files longer than 200 lines, create 120-line overlapping windows covering every line. This ensures 100% file coverage — no code is left unindexed.</p><p><strong>Deduplication:</strong> Both passes may generate chunks with overlapping line ranges. Before returning, all chunks are deduplicated by SHA-1 ID so ChromaDB's upsert receives only unique chunks.</p></div></div>
+
+      <div class="qa-item" id="par-3"><div class="qa-q" onclick="toggle('par-3')"><div class="qa-q-left"><div class="q-number">Q35</div><div class="q-text">Why is a SHA-1 hash used as the chunk ID? Isn't SHA-1 broken?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The chunk ID formula is <code>sha1(f"{file_path}:{start}:{end}:{content[:80]}")</code>. SHA-1 is used here as a <strong>content-addressable key</strong>, not for cryptographic security. The goal is: same chunk content → same ID (for idempotent upserts). SHA-1 collisions exist but are astronomically rare for code content — two different code chunks producing the same SHA-1 hash essentially never happens in practice.</p><p>For cryptographic security (password hashing, tokens), SHA-1 is indeed broken. For content-addressable IDs (like Git uses SHA-1 for commit hashes), it's still widely acceptable. If needed, SHA-256 would be a drop-in improvement with no meaningful performance cost.</p></div></div>
+
+      <div class="qa-item" id="par-4"><div class="qa-q" onclick="toggle('par-4')"><div class="qa-q-left"><div class="q-number">Q36</div><div class="q-text">How does the GitHub URL normalization work?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>User-provided GitHub URLs come in many forms. The parser uses regex to extract owner and repo from any format: <code>re.match(r"^https?://(?:www\.)?github\.com/([^/]+)/([^/]+)", url)</code>. It then reconstructs the canonical git clone URL: <code>https://github.com/{owner}/{repo}.git</code>.</p><p>Branch detection: if the URL contains <code>/tree/{branch}/path</code>, it parses out the branch name and passes it to <code>Repo.clone_from(url, target, depth=1, branch=branch)</code>. If the branch clone fails (branch doesn't exist), it falls back to cloning the default branch. <code>depth=1</code> is a shallow clone — only the latest commit, no history — which is much faster for large repos.</p></div></div>
+
+      <div class="qa-item" id="par-5"><div class="qa-q" onclick="toggle('par-5')"><div class="qa-q-left"><div class="q-number">Q37</div><div class="q-text">Why does the parser filter out node_modules, dist, .venv and similar directories?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The <code>IGNORE_DIRS</code> set excludes: <code>.git</code>, <code>node_modules</code>, <code>dist</code>, <code>build</code>, <code>.venv</code>, <code>venv</code>, <code>__pycache__</code>, <code>target</code>, <code>.next</code>.</p><p>Without this filter, <code>node_modules</code> alone can contain thousands of third-party files (hundreds of MB), making indexing take 10-100× longer and polluting the vector store with irrelevant library code. Users never ask about their dependencies' implementation details — they ask about their own code. The filter also enforces a 1MB file size limit to prevent indexing generated/minified bundles.</p></div></div>
+
+      <div class="qa-item" id="par-6"><div class="qa-q" onclick="toggle('par-6')"><div class="qa-q-left"><div class="q-number">Q38</div><div class="q-text">What is a DependencyEdge and how is the dependency graph constructed?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>A <code>DependencyEdge</code> has: <code>source</code> (file path), <code>target</code> (imported module or symbol), <code>kind</code> (imports/calls/contains/api). Edges are created in three ways:</p><ol><li><strong>Import edges:</strong> For each file, extract import statements (AST for Python, regex for others). Each import → <code>DependencyEdge(source=file, target=imported_module, kind="imports")</code>.</li><li><strong>Contains edges:</strong> Each symbol in a file → <code>DependencyEdge(source=file, target=symbol.name, kind="contains")</code>.</li><li>The analysis service uses these edges to build the React Flow visualization graph — nodes are files/symbols, edges are dependencies.</li></ol></div></div>
+
+      <div class="qa-item" id="par-7"><div class="qa-q" onclick="toggle('par-7')"><div class="qa-q-left"><div class="q-number">Q39</div><div class="q-text">How does the tempdir cleanup work and why is it important?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The parser creates a temporary directory with <code>tempfile.mkdtemp(prefix="codeinsight-")</code>, clones the repository into it, processes all files, then in a <code>finally</code> block calls <code>shutil.rmtree(workdir, ignore_errors=True)</code>.</p><p>The <code>finally</code> block is critical — it runs even if parsing raises an exception. Without it, every failed parse would leave cloned repositories on disk (potentially gigabytes). The <code>ignore_errors=True</code> flag prevents the cleanup itself from raising if the temp dir was partially created. This is the RAII (Resource Acquisition Is Initialization) pattern — acquire the temp dir at the start, guarantee release at the end.</p></div></div>
+
+      <div class="qa-item" id="par-8"><div class="qa-q" onclick="toggle('par-8')"><div class="qa-q-left"><div class="q-number">Q40</div><div class="q-text">How does the parser handle ZIP archives vs GitHub repositories?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The <code>_materialize_repository()</code> function branches on <code>request.sourceType</code>:</p><ul><li><strong>"github":</strong> Normalizes the URL, constructs the git clone URL, runs <code>Repo.clone_from(url, target, depth=1)</code> (shallow clone for speed). Returns the cloned directory path.</li><li><strong>"zip":</strong> Validates the archive path exists, extracts with <code>zipfile.ZipFile.extractall()</code>, checks if the ZIP contains a single top-level directory (common for GitHub-downloaded ZIPs), and returns that directory as the root. Otherwise returns the extraction root.</li></ul><p>The single-directory detection handles the common case where a GitHub-downloaded ZIP extracts as <code>repo-main/</code> with all files inside — the parser unwraps it automatically.</p></div></div>
+
+      <div class="qa-item" id="par-9"><div class="qa-q" onclick="toggle('par-9')"><div class="qa-q-left"><div class="q-number">Q41</div><div class="q-text">What languages does the parser support and how is language detection done?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The <code>SUPPORTED</code> dict maps file extensions to language names: <code>.py → Python</code>, <code>.ts/.tsx → TypeScript</code>, <code>.js/.jsx → JavaScript</code>, <code>.cpp/.cc/.hpp/.h → C++</code>, <code>.java → Java</code>.</p><p>Language detection is purely extension-based: <code>SUPPORTED.get(file_path.suffix.lower(), "Config")</code>. Config files (<code>package.json</code>, <code>Dockerfile</code>, <code>requirements.txt</code>, etc.) are indexed as "Config" language for completeness. The language name is stored in each <code>CodeChunk</code> and used both for display and as metadata in the embedding text prefix.</p><p>Limitation: <code>.h</code> headers are assumed C++ (could be C). Binary files, images, and lock files are excluded by the 1MB size limit and extension filtering.</p></div></div>
+
+      <div class="qa-item" id="par-10"><div class="qa-q" onclick="toggle('par-10')"><div class="qa-q-left"><div class="q-number">Q42</div><div class="q-text">How does _guess_block_end work and what's the problem with it?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>For non-Python languages using regex-based symbol detection, the parser can find where a function starts (via the regex match line) but can't reliably determine where it ends without a full parser. <code>_guess_block_end(lines, start_line)</code> simply returns <code>min(len(lines), start_line + 80)</code> — a fixed 80-line estimate.</p><p><strong>Problem:</strong> This is a rough approximation. A 5-line utility function gets a 80-line chunk (includes following code). A 300-line class method is truncated at line 80. Both scenarios degrade embedding quality. The proper fix is using a real parser (tree-sitter) that provides accurate <code>end_lineno</code> for all languages, which is on the improvement roadmap.</p></div></div>
+    </div>
+
+    <!-- ════════ STREAMING ════════ -->
+    <div class="section" id="sec-streaming">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 5 · 8 QUESTIONS</div>
+        <div class="section-title">Streaming <span>& SSE</span></div>
+        <div class="section-desc">Questions about Server-Sent Events, streaming LLM responses, proxy configuration, and client-side stream consumption.</div>
+      </div>
+      <div class="section-actions"><button class="action-btn" onclick="expandAll('streaming')">Expand All</button><button class="action-btn" onclick="collapseAll('streaming')">Collapse All</button></div>
+
+      <div class="qa-item" id="str-1"><div class="qa-q" onclick="toggle('str-1')"><div class="qa-q-left"><div class="q-number">Q43</div><div class="q-text">What is SSE and how is it different from WebSockets?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>SSE (Server-Sent Events):</strong> One-directional, server → client push over a standard HTTP connection. The browser keeps an HTTP response open and receives <code>data: ...\n\n</code> events as they arrive. Built into browsers via <code>EventSource</code> API. Works over HTTP/1.1 and HTTP/2. Automatic reconnection on disconnect.</p><p><strong>WebSockets:</strong> Bidirectional, full-duplex connection over a WebSocket handshake (HTTP upgrade). Both sides can send messages anytime. More complex, requires WebSocket server infrastructure.</p><p>For LLM token streaming, SSE is the right choice: the server sends tokens, the client never needs to send data mid-stream. SSE's simplicity, auto-reconnect, and HTTP compatibility make it ideal.</p></div></div>
+
+      <div class="qa-item" id="str-2"><div class="qa-q" onclick="toggle('str-2')"><div class="qa-q-left"><div class="q-number">Q44</div><div class="q-text">Why do you escape newlines in SSE tokens?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The SSE specification uses <code>\n\n</code> (double newline) as the event terminator. A single <code>data:</code> field ends at the next <code>\n</code>. If an LLM token contains a literal newline character (e.g., a code block line break), the <code>data:</code> field would terminate prematurely, and the browser would parse the remaining content as a new (malformed) event.</p><p>Fix: replace <code>\n</code> with the literal string <code>\\n</code> before yielding each token. The client reverses this: <code>token.replaceAll("\\n", "\n")</code>. This preserves the newline semantics in the displayed text while keeping SSE events well-formed.</p></div></div>
+
+      <div class="qa-item" id="str-3"><div class="qa-q" onclick="toggle('str-3')"><div class="qa-q-left"><div class="q-number">Q45</div><div class="q-text">How does FastAPI's StreamingResponse work?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>StreamingResponse</code> takes an async generator (or iterator) and streams its yielded chunks as the HTTP response body. It sets the <code>Content-Type</code> header from the <code>media_type</code> argument (<code>"text/event-stream"</code>) and adds <code>Transfer-Encoding: chunked</code> to stream without a known Content-Length.</p><p>Each <code>yield f"data: {token}\n\n"</code> in the generator sends that chunk to the client immediately — FastAPI's ASGI server (uvicorn) flushes the TCP buffer after each yield. This is why the client sees tokens one-by-one rather than waiting for the full response.</p></div></div>
+
+      <div class="qa-item" id="str-4"><div class="qa-q" onclick="toggle('str-4')"><div class="qa-q-left"><div class="q-number">Q46</div><div class="q-text">What are the SSE custom events (citations, done) and how does the client handle them?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Standard SSE data events: <code>data: token\n\n</code> — received by <code>eventSource.onmessage</code>. Custom SSE events use the <code>event:</code> field: <code>event: citations\ndata: [...]\n\n</code> — received by <code>eventSource.addEventListener('citations', handler)</code>.</p><p>The client sets up: <code>eventSource.addEventListener('citations', e => { const cites = JSON.parse(e.data); appendCitationsToMessage(cites); })</code> and <code>eventSource.addEventListener('done', () => eventSource.close())</code>. This cleanly separates token content from metadata: the stream sends tokens first, then citations, then signals completion.</p></div></div>
+
+      <div class="qa-item" id="str-5"><div class="qa-q" onclick="toggle('str-5')"><div class="qa-q-left"><div class="q-number">Q47</div><div class="q-text">How does httpx handle streaming LLM API responses in Python?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>httpx.AsyncClient.stream("POST", url, json=payload)</code> opens an async HTTP connection with streaming enabled. The <code>async with client.stream(...):</code> context manager keeps the connection open. <code>async for line in response.aiter_lines()</code> yields each line of the response body as it arrives from the TCP stream.</p><p>For OpenAI-compatible APIs, each line is either <code>data: {"choices":[{"delta":{"content":"token"}}]}</code> or <code>data: [DONE]</code>. The code parses the JSON, extracts the token from <code>choices[0]["delta"]["content"]</code>, and yields it. This creates a chain: LLM API → httpx line iterator → Python generator → FastAPI StreamingResponse → browser.</p></div></div>
+
+      <div class="qa-item" id="str-6"><div class="qa-q" onclick="toggle('str-6')"><div class="qa-q-left"><div class="q-number">Q48</div><div class="q-text">Why does X-Accel-Buffering matter for SSE proxies?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Nginx (and other reverse proxies) buffer upstream responses by default — they accumulate bytes before forwarding to clients. For SSE streams, this means Nginx holds tokens until its buffer fills, then sends a batch — destroying the real-time streaming effect.</p><p>The <code>X-Accel-Buffering: no</code> header instructs Nginx to disable buffering for that specific response and forward each chunk immediately to the client. Without this header, deployed SSE streams behind Nginx show no tokens until the entire LLM response completes — the chat appears to hang, then all tokens appear at once.</p></div></div>
+
+      <div class="qa-item" id="str-7"><div class="qa-q" onclick="toggle('str-7')"><div class="qa-q-left"><div class="q-number">Q49</div><div class="q-text">How does the Node gateway proxy an SSE stream from the Python RAG service to the React client?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The gateway sets response headers matching SSE requirements: <code>Content-Type: text/event-stream</code>, <code>Cache-Control: no-cache</code>, <code>Connection: keep-alive</code>. It then makes an HTTP GET/POST to the RAG service and pipes the response stream directly: <code>pythonResponse.body.pipe(res)</code> (Node streams).</p><p>The key is <strong>piping, not buffering</strong>. If the gateway did <code>const body = await fetch(ragUrl).then(r => r.text())</code>, it would wait for the entire response before forwarding — buffering. Piping connects the incoming stream to the outgoing stream byte-for-byte, maintaining the SSE timing semantics.</p></div></div>
+
+      <div class="qa-item" id="str-8"><div class="qa-q" onclick="toggle('str-8')"><div class="qa-q-left"><div class="q-number">Q50</div><div class="q-text">What happens if the SSE connection drops mid-stream?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Browser's native <code>EventSource</code> automatically reconnects after a configurable delay (default 3 seconds) if the connection drops. It sends a <code>Last-Event-ID</code> header with the ID of the last received event, allowing the server to resume from where it left off — but only if the server tracks event IDs and supports resumption.</p><p>In CodeInsight's current implementation, events don't have IDs and the server doesn't support resumption. A dropped SSE connection means the partial response is lost and the user must re-ask the question. For production, using <code>id:</code> fields in SSE events and server-side event journaling would enable resumable streams.</p></div></div>
+    </div>
+
+    <!-- ════════ AUTH ════════ -->
+    <div class="section" id="sec-auth">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 6 · 10 QUESTIONS</div>
+        <div class="section-title">Auth <span>& Security</span></div>
+        <div class="section-desc">JWT authentication, bcrypt password hashing, middleware patterns, and security considerations.</div>
+      </div>
+      <div class="section-actions"><button class="action-btn" onclick="expandAll('auth')">Expand All</button><button class="action-btn" onclick="collapseAll('auth')">Collapse All</button></div>
+
+      <div class="qa-item" id="aut-1"><div class="qa-q" onclick="toggle('aut-1')"><div class="qa-q-left"><div class="q-number">Q51</div><div class="q-text">How does JWT authentication work in this project?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Register:</strong> Client sends email + password. Server hashes password with bcrypt (10 rounds), saves user to MongoDB, returns <code>jwt.sign({ sub: user._id }, JWT_SECRET, { expiresIn: '7d' })</code>.</p><p><strong>Login:</strong> Client sends credentials. Server looks up user by email, uses <code>bcrypt.compare(password, user.passwordHash)</code> to verify, returns a new JWT if valid.</p><p><strong>Protected routes:</strong> Every request to a protected route must include <code>Authorization: Bearer {token}</code>. The <code>requireAuth</code> middleware extracts the token, calls <code>jwt.verify(token, JWT_SECRET)</code> — which validates the signature and expiry — and attaches <code>req.userId = payload.sub</code> for downstream use.</p></div></div>
+
+      <div class="qa-item" id="aut-2"><div class="qa-q" onclick="toggle('aut-2')"><div class="qa-q-left"><div class="q-number">Q52</div><div class="q-text">What is bcrypt and why use it over SHA-256 for passwords?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>SHA-256</strong> is a fast cryptographic hash — billions per second on modern GPUs. An attacker with a leaked database can try billions of password guesses per second (brute force / rainbow tables).</p><p><strong>bcrypt</strong> is an adaptive <em>password hashing function</em> designed to be intentionally slow (work factor 10 = ~100ms per hash on typical hardware). Each hash includes a unique random salt, preventing rainbow table attacks. The cost factor is adjustable — as hardware gets faster, you increase the cost to keep up. <code>bcrypt.compare()</code> is constant-time, preventing timing attacks. These properties make bcrypt specifically suited for passwords.</p></div></div>
+
+      <div class="qa-item" id="aut-3"><div class="qa-q" onclick="toggle('aut-3')"><div class="qa-q-left"><div class="q-number">Q53</div><div class="q-text">What are the three parts of a JWT? Can you decode one without the secret?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>JWT = <code>base64url(header).base64url(payload).base64url(signature)</code></p><p><strong>Header:</strong> <code>{"alg":"HS256","typ":"JWT"}</code> — the algorithm used to sign.</p><p><strong>Payload:</strong> <code>{"sub":"userId","iat":timestamp,"exp":timestamp}</code> — the claims.</p><p><strong>Signature:</strong> <code>HMAC-SHA256(header + "." + payload, JWT_SECRET)</code> — proves the server issued this token.</p><p><strong>Can you decode without the secret?</strong> Yes — header and payload are just base64url-encoded (not encrypted). Anyone can decode them. But you cannot <em>verify</em> or <em>forge</em> a valid signature without the secret. The payload is visible but tamper-evident. For sensitive data, use JWE (JSON Web Encryption) instead of JWS (JSON Web Signature).</p></div></div>
+
+      <div class="qa-item" id="aut-4"><div class="qa-q" onclick="toggle('aut-4')"><div class="qa-q-left"><div class="q-number">Q54</div><div class="q-text">Why is the 7-day JWT expiry a security risk? What's the production solution?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>A 7-day JWT cannot be revoked before expiry. If a user's token is stolen (XSS, traffic interception), the attacker has 7-day access. There's no server-side session to invalidate.</p><p><strong>Production solution — Refresh Tokens:</strong> Issue short-lived access JWTs (15 minutes) + long-lived opaque refresh tokens (30 days) stored in a database. The client uses the access JWT for API calls. When it expires, the client exchanges the refresh token for a new access JWT. To "logout" or revoke access, delete the refresh token from the database — the next exchange attempt fails. This gives the security of short-lived tokens without forcing re-login every 15 minutes.</p></div></div>
+
+      <div class="qa-item" id="aut-5"><div class="qa-q" onclick="toggle('aut-5')"><div class="qa-q-left"><div class="q-number">Q55</div><div class="q-text">How does the auth middleware prevent unauthorized access to other users' repositories?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Two layers: (1) <strong>Authentication</strong>: The <code>requireAuth</code> middleware verifies the JWT and attaches <code>req.userId</code>. Unauthenticated requests are rejected at this layer. (2) <strong>Authorization</strong>: Route handlers query MongoDB with <em>both</em> the repository ID from the URL and <code>ownerId: req.userId</code>: <code>Repository.findOne({ _id: req.params.id, ownerId: req.userId })</code>. If the repo exists but belongs to a different user, this query returns null → 404 (not 403, to avoid confirming the repo exists).</p><p>Without the ownership check, any authenticated user could access any repository by guessing or enumerating MongoDB ObjectIDs.</p></div></div>
+
+      <div class="qa-item" id="aut-6"><div class="qa-q" onclick="toggle('aut-6')"><div class="qa-q-left"><div class="q-number">Q56</div><div class="q-text">What is CORS and how is it handled in this project?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>CORS (Cross-Origin Resource Sharing)</strong> is a browser security mechanism that blocks JavaScript from making requests to a different origin (domain:port) than the page was loaded from.</p><p>In Express, <code>cors()</code> middleware sets response headers like <code>Access-Control-Allow-Origin: http://localhost:5173</code>, allowing the browser to make requests from the React dev server to the API. In production, this would be set to the actual frontend domain.</p><p>In development, the Vite proxy avoids CORS entirely by making the browser believe all requests are same-origin (<code>localhost:5173</code>). The proxy handles the actual cross-origin call server-side where CORS restrictions don't apply.</p></div></div>
+
+      <div class="qa-item" id="aut-7"><div class="qa-q" onclick="toggle('aut-7')"><div class="qa-q-left"><div class="q-number">Q57</div><div class="q-text">Where is the JWT token stored on the client and what are the security implications?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The Redux slice stores the JWT in memory (JavaScript state) and typically in <code>localStorage</code> for persistence across page reloads.</p><p><strong>localStorage security risk:</strong> Any JavaScript on the page can read localStorage — including injected scripts from XSS attacks. Storing JWTs there is a known security risk.</p><p><strong>Recommended alternative:</strong> Store JWTs in <code>httpOnly</code> cookies. <code>httpOnly</code> cookies are inaccessible to JavaScript, making them immune to XSS-based token theft. The cookie is automatically sent with every request. The downside: CSRF attacks must be defended against (using SameSite=Strict cookies or CSRF tokens). For a developer tool, localStorage is acceptable; for a financial/sensitive app, httpOnly cookies are required.</p></div></div>
+
+      <div class="qa-item" id="aut-8"><div class="qa-q" onclick="toggle('aut-8')"><div class="qa-q-left"><div class="q-number">Q58</div><div class="q-text">What security risks exist with the ZIP file upload feature?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Zip bombs:</strong> A maliciously crafted ZIP can expand from 1MB to 10GB+ (e.g., 42.zip). Without a decompressed size limit, this crashes the service. Fix: check total uncompressed size before extracting, reject if over a threshold (e.g., 500MB).</p><p><strong>Path traversal:</strong> ZIP entries can have paths like <code>../../etc/passwd</code>. Extracting naively could overwrite system files. Fix: validate that all extracted paths stay within the extraction directory.</p><p><strong>Executable content:</strong> The extracted code is parsed but never executed — this is safe. But a future feature running code tests would introduce code execution risks requiring sandboxing.</p><p><strong>File type checks:</strong> Verify the uploaded file is actually a ZIP (check magic bytes, not just file extension) before processing.</p></div></div>
+
+      <div class="qa-item" id="aut-9"><div class="qa-q" onclick="toggle('aut-9')"><div class="qa-q-left"><div class="q-number">Q59</div><div class="q-text">How would you implement rate limiting to protect against API abuse?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>In Express: use <code>express-rate-limit</code> middleware. Apply globally for endpoint protection and more strictly for auth endpoints to prevent brute force: <code>rateLimit({ windowMs: 15*60*1000, max: 100 })</code> (100 requests per 15 minutes).</p><p>For authenticated users, rate limit by <code>req.userId</code> (from JWT) instead of IP — prevents shared IP false positives. For the LLM chat endpoint specifically, limit by user ID and track token usage against a monthly quota.</p><p>Distributed rate limiting (multiple gateway replicas) requires a shared counter store — Redis with a sliding window algorithm (token bucket or leaky bucket) is the standard solution.</p></div></div>
+
+      <div class="qa-item" id="aut-10"><div class="qa-q" onclick="toggle('aut-10')"><div class="qa-q-left"><div class="q-number">Q60</div><div class="q-text">Why is the JWT_SECRET stored as an environment variable and not hardcoded?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Hardcoding <code>JWT_SECRET = "mysecret"</code> means: (1) it's committed to Git history — anyone with repo access can forge tokens for any user forever. (2) It can't be rotated without a code change + deployment. (3) Different environments (dev/staging/prod) would use the same secret.</p><p>Environment variables keep secrets out of source code. In production, they're injected by the deployment infrastructure (Kubernetes secrets, AWS Secrets Manager, Docker secrets) — never committed to Git. The <code>.gitignore</code> excludes <code>.env</code> files. This follows the 12-factor app methodology: config separated from code.</p></div></div>
+    </div>
+
+    <!-- ════════ DATABASE ════════ -->
+    <div class="section" id="sec-database">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 7 · 10 QUESTIONS</div>
+        <div class="section-title">Databases <span>(MongoDB & ChromaDB)</span></div>
+        <div class="section-desc">MongoDB document modeling, Mongoose schemas, ChromaDB vector operations, and database design decisions.</div>
+      </div>
+      <div class="section-actions"><button class="action-btn" onclick="expandAll('database')">Expand All</button><button class="action-btn" onclick="collapseAll('database')">Collapse All</button></div>
+
+      <div class="qa-item" id="db-1"><div class="qa-q" onclick="toggle('db-1')"><div class="qa-q-left"><div class="q-number">Q61</div><div class="q-text">Why MongoDB instead of PostgreSQL for this project?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>MongoDB's <strong>flexible document model</strong> is ideal for the <code>analysis</code> field in the Repository schema — it stores the entire <code>RepositoryAnalysis</code> object (files, chunks, symbols, dependencies) which has variable structure depending on the repository. In PostgreSQL, this would require either a JSONB column (losing type safety) or complex normalized tables with joins.</p><p>The chat <code>messages</code> array as embedded sub-documents is natural in MongoDB and would require a separate table with foreign keys in PostgreSQL. MongoDB's Mongoose ODM in the Node ecosystem is mature and well-supported.</p><p>Tradeoff: MongoDB has weaker ACID guarantees, no foreign key enforcement, and complex aggregations are less elegant than SQL JOINs. For this use case, the flexibility outweighs the relational advantages.</p></div></div>
+
+      <div class="qa-item" id="db-2"><div class="qa-q" onclick="toggle('db-2')"><div class="qa-q-left"><div class="q-number">Q62</div><div class="q-text">Explain the Mongoose schema design — why are Chat messages embedded vs referenced?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>MongoDB offers two relationship patterns: <strong>embedding</strong> (store related data in the same document) and <strong>referencing</strong> (store an ID that references another collection).</p><p><strong>Messages embedded in Chat</strong>: Chat and its messages are always accessed together — you never need a message without its chat context. Embedding means one query fetches the entire conversation. This is a "has-many" relationship where the "many" is bounded (chat history) and accessed atomically.</p><p><strong>Users and Repos referenced</strong>: Chat references <code>ownerId</code> and <code>repositoryId</code> by ObjectId. These are separate entities with independent lifecycles — you access users and repos without their associated chats. References avoid duplication (user data in one document, not copied everywhere).</p></div></div>
+
+      <div class="qa-item" id="db-3"><div class="qa-q" onclick="toggle('db-3')"><div class="qa-q-left"><div class="q-number">Q63</div><div class="q-text">What does timestamps: true do in Mongoose schemas?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>timestamps: true</code> is a Mongoose schema option that automatically adds and manages two fields: <code>createdAt</code> (set on document creation, never updated) and <code>updatedAt</code> (updated every time the document is saved/updated). Both are ISO 8601 Date objects.</p><p>Without <code>timestamps: true</code>, you'd need to manually set these fields in every create/update operation — error-prone and easy to forget. They're essential for auditing, debugging ("when was this repo created?"), and displaying human-readable dates in the UI.</p></div></div>
+
+      <div class="qa-item" id="db-4"><div class="qa-q" onclick="toggle('db-4')"><div class="qa-q-left"><div class="q-number">Q64</div><div class="q-text">How does ChromaDB's get_or_create_collection work?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>client.get_or_create_collection(name=f"repo_{repository_id}")</code> is an idempotent operation: if a collection with that name exists, it returns it; if not, it creates a new one and returns it. No need to check existence first, no error if it already exists.</p><p>This means the same code works correctly for both the first-time indexing of a new repository and re-indexing an existing one (e.g., after code changes). The subsequent <code>upsert()</code> calls update existing vectors or add new ones as needed.</p></div></div>
+
+      <div class="qa-item" id="db-5"><div class="qa-q" onclick="toggle('db-5')"><div class="qa-q-left"><div class="q-number">Q65</div><div class="q-text">What metadata is stored alongside vectors in ChromaDB and why?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Each vector in ChromaDB is stored with: <code>filePath</code> (the source file), <code>language</code> (Python/TypeScript/etc.), <code>startLine</code>, <code>endLine</code>, <code>symbol</code> (the function/class name if applicable).</p><p>This metadata is returned alongside the vector search results and used to: (1) Generate citations for the UI (<code>filePath:startLine-endLine</code>). (2) Build the embedding text prefix for query-time context. (3) Filter results (future feature — filter by language or file path). (4) Display in the analysis visualization. Metadata is stored as flat key-value pairs (strings/numbers) — not nested objects — because ChromaDB's metadata schema doesn't support nesting.</p></div></div>
+
+      <div class="qa-item" id="db-6"><div class="qa-q" onclick="toggle('db-6')"><div class="qa-q-left"><div class="q-number">Q66</div><div class="q-text">How would you handle MongoDB connection failures in the Node gateway?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Mongoose's <code>connect()</code> includes built-in reconnection logic: it automatically retries connections on failure with exponential backoff. Setting <code>serverSelectionTimeoutMS</code> controls how long to wait before failing.</p><p>For production robustness: (1) Listen to Mongoose connection events (<code>mongoose.connection.on('error', ...)</code>) and log them. (2) Add a health check endpoint that returns 503 if MongoDB is disconnected. (3) Consider circuit breaker pattern — if MongoDB is down for >N seconds, immediately reject requests rather than queuing them. (4) Use MongoDB Atlas with multi-region replicas for zero-downtime during maintenance.</p></div></div>
+
+      <div class="qa-item" id="db-7"><div class="qa-q" onclick="toggle('db-7')"><div class="qa-q-left"><div class="q-number">Q67</div><div class="q-text">What is the Mixed type in the Repository schema's analysis field?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Mongoose's <code>Mixed</code> type (also <code>Schema.Types.Mixed</code> or just <code>Object</code>) tells Mongoose "this field can be anything — don't apply schema validation to it." The <code>analysis</code> field stores the entire <code>RepositoryAnalysis</code> object from the Python parser, which has a complex nested structure (files, chunks, symbols, edges) that would be tedious to fully schema-ify in Mongoose.</p><p>Tradeoff: <code>Mixed</code> disables Mongoose's change detection for that field — you must call <code>repo.markModified('analysis')</code> after updating it, or Mongoose won't know to include it in the MongoDB update operation. It also loses type safety on the Node side — TypeScript just sees it as <code>any</code>.</p></div></div>
+
+      <div class="qa-item" id="db-8"><div class="qa-q" onclick="toggle('db-8')"><div class="qa-q-left"><div class="q-number">Q68</div><div class="q-text">How does MongoDB ObjectId differ from a UUID and why does MongoDB use it?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>ObjectId</strong> is a 12-byte (24 hex char) MongoDB-specific ID: 4 bytes timestamp + 5 bytes machine ID + 3 bytes counter. This means ObjectIds are roughly sortable by creation time (first 4 bytes = Unix timestamp).</p><p><strong>UUID</strong> (v4) is 16 bytes of random data — completely random, no inherent ordering.</p><p><strong>Why MongoDB uses ObjectId:</strong> The timestamp encoding allows <code>ObjectId.getTimestamp()</code> to recover creation time without a separate field. The machine ID + counter ensures uniqueness across distributed nodes without coordination — MongoDB can generate IDs in clients without a server round-trip. For this project, ObjectIds serve as the repository ID used in ChromaDB collection names (<code>repo_{id}</code>).</p></div></div>
+
+      <div class="qa-item" id="db-9"><div class="qa-q" onclick="toggle('db-9')"><div class="qa-q-left"><div class="q-number">Q69</div><div class="q-text">What indexes should be added to the MongoDB collections for performance?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>User collection:</strong> <code>{ email: 1 }</code> unique index — login queries find by email, must be fast and unique.</p><p><strong>Repository collection:</strong> <code>{ ownerId: 1 }</code> — repository list for a user. <code>{ ownerId: 1, status: 1 }</code> compound — filter by status within a user's repos. <code>{ ownerId: 1, _id: 1 }</code> — ownership verification queries.</p><p><strong>Chat collection:</strong> <code>{ repositoryId: 1, ownerId: 1 }</code> — load chats for a specific repository by a specific user.</p><p>Without these indexes, MongoDB performs full collection scans (O(N)) for every query. The User email index is defined inline in the Mongoose schema (<code>unique: true</code> implies an index). Others should be added explicitly as compound indexes for optimal query coverage.</p></div></div>
+
+      <div class="qa-item" id="db-10"><div class="qa-q" onclick="toggle('db-10')"><div class="qa-q-left"><div class="q-number">Q70</div><div class="q-text">How does ChromaDB persist data across container restarts?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>In the Docker Compose setup, ChromaDB runs as its own container (<code>chromadb/chroma</code> image) with a volume mount: the container's <code>/chroma/chroma</code> directory is mounted to a host volume. ChromaDB's PersistentClient writes all vector data (HNSW graphs, metadata) to this directory as files on disk.</p><p>When the container restarts, the volume persists and ChromaDB reads the existing data back into memory. Without a volume mount, ChromaDB data would be lost on container restart (ephemeral container filesystem). The Python services connect via <code>chromadb.HttpClient(host="chromadb", port=8000)</code> — calling the ChromaDB HTTP server, not the filesystem directly.</p></div></div>
+    </div>
+
+    <!-- ════════ FRONTEND ════════ -->
+    <div class="section" id="sec-frontend">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 8 · 10 QUESTIONS</div>
+        <div class="section-title">React <span>& Frontend</span></div>
+        <div class="section-desc">Redux Toolkit, React Query, TypeScript, state management, and frontend architecture questions.</div>
+      </div>
+      <div class="section-actions"><button class="action-btn" onclick="expandAll('frontend')">Expand All</button><button class="action-btn" onclick="collapseAll('frontend')">Collapse All</button></div>
+
+      <div class="qa-item" id="fe-1"><div class="qa-q" onclick="toggle('fe-1')"><div class="qa-q-left"><div class="q-number">Q71</div><div class="q-text">Why use both Redux Toolkit AND React Query? Don't they overlap?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>They serve different kinds of state: <strong>Redux Toolkit</strong> manages <em>global client state</em> — the logged-in user, their JWT token, UI state that multiple components need. This state doesn't come from the server and has no caching/fetching lifecycle.</p><p><strong>React Query</strong> manages <em>server state</em> — repository lists, chat history, data fetched from APIs. It handles caching, background refetching, loading/error states, and cache invalidation. Doing this in Redux would require boilerplate actions for every fetch (loading, success, error, refetch).</p><p>The split: Redux for auth/user state, React Query for all API data. They don't overlap — they complement each other.</p></div></div>
+
+      <div class="qa-item" id="fe-2"><div class="qa-q" onclick="toggle('fe-2')"><div class="qa-q-left"><div class="q-number">Q72</div><div class="q-text">How does React Query's polling work for repository status?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>useQuery({ queryKey: ['repo', id], queryFn: () => fetchRepo(id), refetchInterval: (data) => data?.status === 'ready' ? false : 3000 })</code></p><p>React Query's <code>refetchInterval</code> can be a function that receives the current data and returns either a number (milliseconds until next refetch) or <code>false</code> (stop refetching). While the repository status is <code>queued</code>, <code>parsing</code>, or <code>embedding</code>, it refetches every 3 seconds. When status becomes <code>ready</code> (or <code>failed</code>), it returns <code>false</code> to stop polling. The UI automatically updates from the cached data on each successful refetch.</p></div></div>
+
+      <div class="qa-item" id="fe-3"><div class="qa-q" onclick="toggle('fe-3')"><div class="qa-q-left"><div class="q-number">Q73</div><div class="q-text">What is Monaco Editor and why is it used here?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Monaco Editor</strong> is the open-source editor that powers Visual Studio Code, published as a standalone browser-embeddable component by Microsoft. It supports syntax highlighting for 100+ languages, IntelliSense, diff views, minimap, code folding, and line numbers.</p><p>In CodeInsight, Monaco is used as a <em>read-only code viewer</em> in the workspace: when a user browses repository files or views a cited code location from the chat, Monaco renders the source with proper syntax highlighting, line numbers, and the ability to highlight specific line ranges (citations). It's dramatically better than a <code>&lt;pre&gt;</code> tag for developer UX.</p></div></div>
+
+      <div class="qa-item" id="fe-4"><div class="qa-q" onclick="toggle('fe-4')"><div class="qa-q-left"><div class="q-number">Q74</div><div class="q-text">What is React Flow used for in this project?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>React Flow</strong> is a library for building interactive node-graph visualizations in React. In CodeInsight, it renders the <strong>architecture dependency graph</strong>: each file/module is a node, each import/contains/api relationship is a directed edge (arrow).</p><p>The analysis service computes node and edge data from the <code>RepositoryAnalysis.dependencies</code> array. The frontend passes these to React Flow which renders an interactive, zoomable, pannable graph. Users can see at a glance how modules depend on each other, identify highly-connected hub files, and understand the system architecture visually.</p></div></div>
+
+      <div class="qa-item" id="fe-5"><div class="qa-q" onclick="toggle('fe-5')"><div class="qa-q-left"><div class="q-number">Q75</div><div class="q-text">How does the TypeScript types.ts file enforce contracts between frontend and backend?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>types.ts</code> defines shared interfaces like <code>Repository</code>, <code>ChatMessage</code>, <code>User</code> that model the exact JSON shape returned by the API. These interfaces are imported throughout the frontend — in React Query fetchers, in Redux state types, in component props.</p><p>TypeScript enforces that the shapes match at compile time. If the server changes <code>status</code> to <code>state</code> but you don't update <code>types.ts</code>, TypeScript compile errors appear everywhere <code>repo.status</code> is used — catching the integration bug before it reaches production. This is the benefit of TypeScript full-stack: client and server share the same type language.</p></div></div>
+
+      <div class="qa-item" id="fe-6"><div class="qa-q" onclick="toggle('fe-6')"><div class="qa-q-left"><div class="q-number">Q76</div><div class="q-text">How does Framer Motion improve the user experience?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Framer Motion provides declarative animation in React. In CodeInsight, it's used for: smooth slide-in/fade transitions when navigating between sections, animated loading states during repository processing, micro-animations on hover (buttons, cards lifting), and smooth layout animations when the chat message list expands.</p><p>The UX benefit: animations signal state transitions clearly (processing → ready), reduce perceived loading time by keeping the UI active, and make the app feel polished and responsive. From a technical standpoint, Framer Motion uses GPU-accelerated CSS transforms (not layout-affecting properties), preventing jank (dropped frames).</p></div></div>
+
+      <div class="qa-item" id="fe-7"><div class="qa-q" onclick="toggle('fe-7')"><div class="qa-q-left"><div class="q-number">Q77</div><div class="q-text">What is Vite and why use it over Create React App?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Vite</strong> is a modern frontend build tool that uses ES modules natively during development (no bundling) and Rollup for production builds. <strong>Create React App (CRA)</strong> uses webpack for both development and production.</p><p>Vite advantages: (1) <strong>10-100× faster cold start</strong> — no full bundle needed, just serve native ESM. (2) <strong>Instant HMR (Hot Module Replacement)</strong> — only the changed module updates, not the whole bundle. (3) <strong>Smaller config</strong> — CRA is opaque and hard to customize without ejecting. (4) <strong>Modern</strong> — CRA is effectively deprecated, Vite is the current standard. The <code>vite.config.ts</code> also provides the <code>server.proxy</code> for the API gateway, replacing the need for a separate CORS configuration in development.</p></div></div>
+
+      <div class="qa-item" id="fe-8"><div class="qa-q" onclick="toggle('fe-8')"><div class="qa-q-left"><div class="q-number">Q78</div><div class="q-text">What is a Redux slice and how is the auth slice structured?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>A Redux Toolkit <strong>slice</strong> is a co-located bundle of: state shape, action creators, and reducers for one feature. Created with <code>createSlice({ name, initialState, reducers })</code>.</p><p>The auth slice has: <code>initialState: { user: null, token: localStorage.getItem('token') || null }</code> (persists across page loads). Reducers: <code>setCredentials(state, action) { state.user = action.payload.user; state.token = action.payload.token; localStorage.setItem('token', action.payload.token); }</code> and <code>logout(state) { state.user = null; state.token = null; localStorage.removeItem('token'); }</code>. The exported actions are dispatched from login/register components after successful API calls.</p></div></div>
+
+      <div class="qa-item" id="fe-9"><div class="qa-q" onclick="toggle('fe-9')"><div class="qa-q-left"><div class="q-number">Q79</div><div class="q-text">How does the Repository status type work as a finite state machine in TypeScript?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>status: 'queued' | 'parsing' | 'embedding' | 'ready' | 'failed'</code> is a TypeScript <strong>string literal union type</strong>. This means only these exact strings are valid values — TypeScript will error on <code>repo.status = "processing"</code>. In MongoDB (Mongoose), the corresponding enum validation enforces the same constraint at the database level.</p><p>The UI uses this for conditional rendering: <code>{repo.status === 'ready' ? &lt;ChatPanel /&gt; : &lt;StatusIndicator status={repo.status} /&gt;}</code>. TypeScript exhaustive checks (<code>switch</code> + default: <code>assertNever()</code>) ensure all states are handled, catching missing state handlers at compile time.</p></div></div>
+
+      <div class="qa-item" id="fe-10"><div class="qa-q" onclick="toggle('fe-10')"><div class="qa-q-left"><div class="q-number">Q80</div><div class="q-text">How does TailwindCSS utility-first styling work and what are its tradeoffs?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Tailwind provides atomic utility classes: <code>text-sm</code>, <code>bg-blue-500</code>, <code>flex</code>, <code>px-4</code> that map to specific CSS properties. Instead of writing custom CSS rules in separate files, you compose classes directly in HTML/JSX: <code>&lt;div className="flex items-center gap-4 p-6 bg-gray-900 rounded-lg"&gt;</code>.</p><p><strong>Advantages:</strong> No CSS file switching, no naming things, responsive variants (<code>md:flex-row</code>), dark mode (<code>dark:bg-gray-800</code>), PurgeCSS removes unused classes in production (tiny bundle). <strong>Tradeoffs:</strong> HTML becomes verbose with long class strings, reusing styles requires extracting components, styling logic isn't collocated with CSS files (some find it harder to audit). Tailwind's <code>tailwind.config.js</code> in this project extends the color palette and breakpoints for the specific design system.</p></div></div>
+    </div>
+
+    <!-- ════════ SYSTEM / DEVOPS ════════ -->
+    <div class="section" id="sec-system">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 9 · 10 QUESTIONS</div>
+        <div class="section-title">Docker <span>& DevOps</span></div>
+        <div class="section-desc">Docker Compose, containerization, environment configuration, service health checks, and deployment topics.</div>
+      </div>
+      <div class="section-actions"><button class="action-btn" onclick="expandAll('system')">Expand All</button><button class="action-btn" onclick="collapseAll('system')">Collapse All</button></div>
+
+      <div class="qa-item" id="sys-1"><div class="qa-q" onclick="toggle('sys-1')"><div class="qa-q-left"><div class="q-number">Q81</div><div class="q-text">What is Docker Compose and what problem does it solve for this project?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Docker Compose is a tool for defining and running multi-container Docker applications using a YAML file. Without it, running CodeInsight would require: starting MongoDB, ChromaDB, 5 Python services, and the Node gateway with 9+ separate Docker commands, managing ports, network links, volume mounts, and environment variables manually.</p><p>With Compose, <code>docker compose up --build</code> starts all 9 services with the correct configuration, networking, volumes, and environment variables in one command. Developers don't need Python, MongoDB, or ChromaDB installed locally — everything runs in containers. This is the reproducible environment promise of Docker.</p></div></div>
+
+      <div class="qa-item" id="sys-2"><div class="qa-q" onclick="toggle('sys-2')"><div class="qa-q-left"><div class="q-number">Q82</div><div class="q-text">How does the PYTHONPATH environment variable enable the shared common module?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>PYTHONPATH</code> tells Python where to look for modules beyond the standard library and site-packages. In each Python service's Dockerfile: <code>ENV PYTHONPATH=/services</code>. The <code>services/</code> directory is mounted into the container.</p><p>This means <code>from common.embeddings import embed_texts</code> inside any service resolves to <code>/services/common/embeddings.py</code>. Without <code>PYTHONPATH</code>, Python would look for a package called <code>common</code> in site-packages (installed packages) and fail with <code>ModuleNotFoundError</code>. This avoids publishing <code>common</code> as a pip package — it's shared via the filesystem mount, which is simpler for monorepo development.</p></div></div>
+
+      <div class="qa-item" id="sys-3"><div class="qa-q" onclick="toggle('sys-3')"><div class="qa-q-left"><div class="q-number">Q83</div><div class="q-text">What is a Dockerfile and what are the key instructions used in this project?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>A Dockerfile is a recipe for building a Docker image — a layered, reproducible filesystem snapshot. Key instructions in this project:</p><ul><li><code>FROM python:3.12-slim</code> — base image (minimal Python 3.12)</li><li><code>WORKDIR /app</code> — set working directory</li><li><code>COPY requirements.txt .</code> — copy only requirements first (Docker layer cache: only re-install if requirements change)</li><li><code>RUN pip install -r requirements.txt</code> — install dependencies as a cached layer</li><li><code>COPY . .</code> — copy source code (invalidates cache only if code changes)</li><li><code>ENV PYTHONPATH=/services</code> — set environment variable</li><li><code>CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8101"]</code> — start the service</li></ul></div></div>
+
+      <div class="qa-item" id="sys-4"><div class="qa-q" onclick="toggle('sys-4')"><div class="qa-q-left"><div class="q-number">Q84</div><div class="q-text">What does depth=1 mean in git clone and why is it important?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><code>depth=1</code> performs a <strong>shallow clone</strong> — only the latest commit on the default branch is fetched, without any commit history. A full clone of a large repository (e.g., Linux kernel) can be gigabytes of history. A shallow clone is just the current file tree.</p><p>For CodeInsight's use case (parsing current code to understand architecture), commit history is irrelevant. Shallow clones are 10-100× smaller and faster to download. The tradeoff: you can't run <code>git log</code>, <code>git blame</code>, or check out old commits — but none of these are needed for the parsing use case.</p></div></div>
+
+      <div class="qa-item" id="sys-5"><div class="qa-q" onclick="toggle('sys-5')"><div class="qa-q-left"><div class="q-number">Q85</div><div class="q-text">Why is the .env file in .gitignore?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The <code>.env</code> file contains sensitive values: <code>JWT_SECRET</code>, <code>GROQ_API_KEY</code>, <code>MONGODB_URI</code>, <code>GEMINI_API_KEY</code>. Committing it to Git means anyone with repository access (now or in the future, since Git history is permanent) has these secrets. Attackers regularly scan public GitHub repos for accidentally committed secrets.</p><p><code>.env.example</code> is committed instead — it contains the same keys with placeholder values (e.g., <code>GROQ_API_KEY=your_key_here</code>), serving as documentation for what secrets are needed without exposing actual values. New developers copy it: <code>cp .env.example .env</code> and fill in their own keys.</p></div></div>
+
+      <div class="qa-item" id="sys-6"><div class="qa-q" onclick="toggle('sys-6')"><div class="qa-q-left"><div class="q-number">Q86</div><div class="q-text">What is uvicorn and why is it used to serve FastAPI?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Uvicorn</strong> is an ASGI (Asynchronous Server Gateway Interface) web server implementation for Python. FastAPI is an ASGI framework — it requires an ASGI server to run. Uvicorn is the most popular choice, built on <code>uvloop</code> (a fast event loop) and <code>httptools</code> (fast HTTP parsing).</p><p>ASGI is the async successor to WSGI (what Flask/Django use). ASGI servers can handle async request handlers and streaming responses natively — essential for FastAPI's <code>StreamingResponse</code> and <code>async def</code> route handlers. In production, uvicorn is often run behind Gunicorn (process manager) with multiple worker processes for multi-core utilization.</p></div></div>
+
+      <div class="qa-item" id="sys-7"><div class="qa-q" onclick="toggle('sys-7')"><div class="qa-q-left"><div class="q-number">Q87</div><div class="q-text">What is FastAPI and why was it chosen over Flask or Django?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>FastAPI</strong> is a modern Python web framework built on ASGI with native async support, automatic request validation (via Pydantic), and auto-generated OpenAPI/Swagger documentation.</p><p>Advantages over alternatives: (1) <strong>vs Flask:</strong> FastAPI is async by default (Flask is synchronous, requires extension for async). FastAPI's Pydantic integration auto-validates request bodies and returns clear validation errors. Flask would require manual validation. (2) <strong>vs Django:</strong> Django is a full framework with ORM, templates, admin — overkill for a microservice. FastAPI is lightweight. (3) <strong>Performance:</strong> FastAPI is one of the fastest Python frameworks (comparable to Node.js). (4) <strong>Type hints:</strong> FastAPI uses Python type hints for route parameters, body schemas, and response models — full TypeScript-like type safety in Python.</p></div></div>
+
+      <div class="qa-item" id="sys-8"><div class="qa-q" onclick="toggle('sys-8')"><div class="qa-q-left"><div class="q-number">Q88</div><div class="q-text">How does the health check endpoint help with Docker Compose startup ordering?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Every FastAPI service exposes <code>GET /health</code> returning <code>{"ok": true, "service": "..."}</code>. In <code>docker-compose.yml</code>, services can declare <code>healthcheck</code> directives: <code>test: ["CMD", "curl", "-f", "http://localhost:8101/health"]</code> with <code>interval: 30s</code>, <code>retries: 3</code>.</p><p>Services can then declare <code>depends_on: { repository-parser: { condition: service_healthy } }</code>. Docker Compose won't start the gateway until the parser service passes its health check — preventing the race condition where the gateway tries to call the parser before it's ready to accept connections. Without health checks, you'd see "connection refused" errors at startup that mask real bugs.</p></div></div>
+
+      <div class="qa-item" id="sys-9"><div class="qa-q" onclick="toggle('sys-9')"><div class="qa-q-left"><div class="q-number">Q89</div><div class="q-text">What is the 12-factor app methodology and how does this project follow it?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>The 12-factor app is a methodology for building scalable, maintainable software-as-a-service apps. Key factors this project follows:</p><ul><li><strong>Codebase:</strong> One repo, multiple services (monorepo)</li><li><strong>Dependencies:</strong> Explicitly declared (requirements.txt, package.json)</li><li><strong>Config:</strong> Stored in environment variables (.env), never in code</li><li><strong>Backing services:</strong> MongoDB, ChromaDB, LLM APIs are attached resources, easily swappable</li><li><strong>Build/Release/Run:</strong> Docker images are the build artifact, run with Docker Compose</li><li><strong>Processes:</strong> Services are stateless (any request can hit any instance)</li><li><strong>Port binding:</strong> Each service exposes itself on a specific port</li><li><strong>Concurrency:</strong> Scale by adding process copies</li><li><strong>Disposability:</strong> Fast startup, graceful shutdown (uvicorn handles SIGTERM)</li><li><strong>Logs:</strong> Treated as event streams (stdout)</li></ul></div></div>
+
+      <div class="qa-item" id="sys-10"><div class="qa-q" onclick="toggle('sys-10')"><div class="qa-q-left"><div class="q-number">Q90</div><div class="q-text">How would you deploy this project to production on AWS/GCP?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-hard">HARD</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Container orchestration:</strong> Push Docker images to ECR/GCR. Deploy to ECS Fargate or GKE (Kubernetes). Each Python service runs as a Deployment with 2-3 replicas behind a ClusterIP service.</p><p><strong>Managed services:</strong> Replace self-hosted MongoDB with MongoDB Atlas (or AWS DocumentDB), ChromaDB with Pinecone or Weaviate cloud, Redis for caching/queue.</p><p><strong>Gateway:</strong> Node gateway behind an Application Load Balancer (ALB) with HTTPS termination, auto-scaling by CPU/memory.</p><p><strong>CI/CD:</strong> GitHub Actions pipeline: test → build → push image to ECR → deploy to ECS via rolling update.</p><p><strong>Secrets:</strong> JWT_SECRET and API keys in AWS Secrets Manager, injected as env vars at task definition level — never in Docker images or source code.</p></div></div>
+    </div>
+
+    <!-- ════════ BEHAVIORAL ════════ -->
+    <div class="section" id="sec-behavioral">
+      <div class="section-header">
+        <div class="section-num">CATEGORY 10 · 10 QUESTIONS</div>
+        <div class="section-title">Behavioral <span>(STAR Format)</span></div>
+        <div class="section-desc">Answer these using the STAR format: Situation → Task → Action → Result. These questions test engineering judgment, communication, and growth mindset.</div>
+      </div>
+      <div class="section-actions"><button class="action-btn" onclick="expandAll('behavioral')">Expand All</button><button class="action-btn" onclick="collapseAll('behavioral')">Collapse All</button></div>
+
+      <div class="qa-item" id="beh-1"><div class="qa-q" onclick="toggle('beh-1')"><div class="qa-q-left"><div class="q-number">Q91</div><div class="q-text">Tell me about a technical challenge you faced in this project and how you solved it.</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Situation:</strong> During testing with large repositories, the embedding pipeline crashed with <code>DuplicateIDError</code> from ChromaDB.</p><p><strong>Task:</strong> I needed to understand why duplicate IDs were being generated and fix it without slowing down the pipeline.</p><p><strong>Action:</strong> I traced the issue to the two-pass chunking strategy — symbol-level chunks and sliding window chunks could overlap on the same line ranges, generating identical SHA-1 IDs. I added a deduplication step: after generating all chunks, iterate through them tracking seen IDs in a Python <code>set()</code>, skip any chunk whose ID already appeared. This runs in O(n) time with O(n) memory.</p><p><strong>Result:</strong> The pipeline became stable across all repository sizes. The fix also improved embedding quality slightly by removing redundant chunks that ChromaDB would have overwritten anyway.</p></div></div>
+
+      <div class="qa-item" id="beh-2"><div class="qa-q" onclick="toggle('beh-2')"><div class="qa-q-left"><div class="q-number">Q92</div><div class="q-text">How did you decide on the architecture for this project?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Situation:</strong> I needed to build a system that combined ML (embeddings), databases (MongoDB + ChromaDB), real-time streaming (SSE), and a modern React frontend — all in one project.</p><p><strong>Task:</strong> Choose an architecture that used the best tool for each job without becoming overly complex.</p><p><strong>Action:</strong> I evaluated a monolith (single Python service for everything) vs polyglot microservices. The ML models require Python, the frontend needs React, and the auth/DB layer has the best tooling in Node/TypeScript. I chose microservices with a shared <code>common/</code> library to avoid code duplication, Docker Compose to manage complexity, and a Node API gateway as the single client entry point.</p><p><strong>Result:</strong> Each component could be developed and tested independently. The architecture is explainable, scales naturally, and uses industry-standard patterns that employers recognize.</p></div></div>
+
+      <div class="qa-item" id="beh-3"><div class="qa-q" onclick="toggle('beh-3')"><div class="qa-q-left"><div class="q-number">Q93</div><div class="q-text">What would you do differently if you built this project again?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Three things I'd change: (1) <strong>Async job queue from day 1:</strong> The synchronous parse→embed pipeline was a shortcut that creates HTTP timeout risks for large repos. I'd use Celery + Redis or BullMQ from the beginning. (2) <strong>Tree-sitter for all language parsing:</strong> The regex-based JS/TS/C++ symbol extraction is fragile. Tree-sitter gives grammar-accurate ASTs for every language — I'd use it from the start and avoid the <code>_guess_block_end</code> hack. (3) <strong>Evaluation-driven development:</strong> I built the RAG system without a formal evaluation framework. I'd set up retrieval evaluation (Precision@8, MRR) before writing the first embedding, so I could measure the impact of each design decision.</p></div></div>
+
+      <div class="qa-item" id="beh-4"><div class="qa-q" onclick="toggle('beh-4')"><div class="qa-q-left"><div class="q-number">Q94</div><div class="q-text">How did you test this system given that it involves LLMs?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Testing AI systems is different from testing deterministic code. My approach: (1) <strong>Component isolation:</strong> Tested the parser independently by indexing small repos and verifying chunk counts and symbol extraction. (2) <strong>Offline mode:</strong> The mock LLM and hash embedding fallback allow testing the full pipeline without API calls — fast, free, reproducible. (3) <strong>Snapshot testing for parsing:</strong> For a known repo (like my own), I captured the expected chunk count and symbol list — if parsing produces fewer chunks on a code change, something broke. (4) <strong>Manual golden-set evaluation:</strong> Wrote 10 questions about the codebase, knew the expected answers, compared actual RAG outputs.</p></div></div>
+
+      <div class="qa-item" id="beh-5"><div class="qa-q" onclick="toggle('beh-5')"><div class="qa-q-left"><div class="q-number">Q95</div><div class="q-text">How would you explain what this project does to a non-technical person?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>"Imagine you have a huge book — but instead of chapters about history or science, every page is code written by programmers. You want to ask questions about this book, like 'How does the user login work?' or 'Where does payment processing happen?'</p><p>A normal chatbot like ChatGPT doesn't know anything about your specific book. CodeInsight reads your entire book first, breaks it into thousands of bookmarks, and creates a special index (like a library catalog) that understands <em>meaning</em>, not just words. When you ask a question, it finds the most relevant bookmarks, shows them to an AI, and gets a specific, cited answer — like a research assistant who actually read your codebase."</p></div></div>
+
+      <div class="qa-item" id="beh-6"><div class="qa-q" onclick="toggle('beh-6')"><div class="qa-q-left"><div class="q-number">Q96</div><div class="q-text">What did you learn about working with external APIs and LLMs?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Key lessons: (1) <strong>Always have a fallback:</strong> API keys expire, rate limits hit, providers have outages. The offline mock mode means the system is always demonstrable. (2) <strong>Abstract the provider early:</strong> I initially hardcoded Groq calls. Refactoring to the Strategy Pattern (one interface, multiple implementations) was painful mid-project. Design the abstraction layer before writing provider-specific code. (3) <strong>Streaming is hard to proxy correctly:</strong> Every layer in the stack must not buffer streams. (4) <strong>Token costs add up:</strong> LLM APIs charge per token. Designing good chunking (not sending 100 chunks to the LLM when 8 suffice) matters for both quality and cost. (5) <strong>Prompt engineering is iterative:</strong> The first prompt I wrote hallucinated. Adding "ONLY use provided context" and "call out uncertainty" improved grounding dramatically.</p></div></div>
+
+      <div class="qa-item" id="beh-7"><div class="qa-q" onclick="toggle('beh-7')"><div class="qa-q-left"><div class="q-number">Q97</div><div class="q-text">How does this project demonstrate that you're ready for a software engineering role?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>This project demonstrates several engineering fundamentals: (1) <strong>System design:</strong> I designed a multi-service architecture with clear boundaries and responsibilities, not a script. (2) <strong>Full-stack breadth:</strong> React/TypeScript frontend, Node/Express gateway, Python microservices, MongoDB, ChromaDB — I can work at any layer of the stack. (3) <strong>Modern AI integration:</strong> RAG systems are now a core skill for most product teams. Understanding embeddings, vector search, and LLM streaming is increasingly expected. (4) <strong>Production thinking:</strong> Error handling, offline fallbacks, idempotent operations, environment config — I thought beyond the happy path. (5) <strong>Debugging and iteration:</strong> The DuplicateIDError, SSE newline bug, and Docker networking issues show I can debug non-obvious distributed systems problems.</p></div></div>
+
+      <div class="qa-item" id="beh-8"><div class="qa-q" onclick="toggle('beh-8')"><div class="qa-q-left"><div class="q-number">Q98</div><div class="q-text">What are the limitations of your project that you'd tell an interviewer honestly?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-medium">MEDIUM</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>Honest limitations: (1) <strong>No formal tests:</strong> The project lacks unit tests, integration tests, and CI pipeline — shortcuts taken for speed. (2) <strong>Synchronous blocking pipeline:</strong> Large repos can time out; this needs an async job queue in production. (3) <strong>Regex-based JS/TS parsing is inaccurate:</strong> Arrow functions, inline functions, and complex declarations are missed — tree-sitter would fix this. (4) <strong>No RAG evaluation framework:</strong> I can't quantitatively measure how good the retrieval is — just qualitative manual testing. (5) <strong>Single-user authentication model:</strong> No team workspaces, no access control between users. (6) <strong>No rate limiting or abuse protection.</strong> Being honest about limitations shows self-awareness and maturity — more impressive than pretending the project is perfect.</p></div></div>
+
+      <div class="qa-item" id="beh-9"><div class="qa-q" onclick="toggle('beh-9')"><div class="qa-q-left"><div class="q-number">Q99</div><div class="q-text">How did you approach learning technologies you hadn't used before for this project?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p>For new technologies (ChromaDB, sentence-transformers, SSE, React Flow), my approach: (1) <strong>Understand the concept first:</strong> Read the official documentation introduction and a blog post explaining why the technology exists and what problem it solves — before writing any code. (2) <strong>Minimal proof of concept:</strong> Build the smallest possible working example in isolation (e.g., just embed one string and retrieve it from ChromaDB) before integrating. (3) <strong>Read the source:</strong> When stuck, reading the library's own tests and examples (not just docs) shows real usage patterns. (4) <strong>Debug with print/log:</strong> Add logging at every integration point — if the retrieval returns unexpected results, log the query embedding, the stored embeddings, and the distances. (5) <strong>Iterate and improve:</strong> The first implementation is never optimal — iterate based on what you observe.</p></div></div>
+
+      <div class="qa-item" id="beh-10"><div class="qa-q" onclick="toggle('beh-10')"><div class="qa-q-left"><div class="q-number">Q100</div><div class="q-text">Where would you take this project next, and how does it align with your career goals?</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="q-diff diff-easy">EASY</span><span class="qa-arrow">›</span></div></div><div class="qa-a"><p><strong>Next for the project:</strong> (1) Implement the async job queue (Celery + Redis) for scalable processing. (2) Add tree-sitter parsers for accurate multi-language symbol extraction. (3) Build the MiniGPT Phase 2 educational transformer lab to teach how transformers work. (4) Add a retrieval evaluation framework and use it to tune chunk size and retrieval count. (5) Deploy on a cloud provider with Kubernetes and real CI/CD.</p><p><strong>Career alignment:</strong> This project demonstrates that I can build AI-powered products end-to-end — from the ML pipeline to the UI to DevOps. The intersection of software engineering and AI is where the most impactful work is happening right now. I want to be on teams building AI-native products, where understanding both the systems side (distributed services, databases) and the AI side (embeddings, LLMs, RAG) creates unique value. This project proves I can do both.</p></div></div>
+    </div>
+
+    <!-- SEARCH RESULTS -->
+    <div class="section" id="sec-search">
+      <div class="section-header">
+        <div class="section-num">SEARCH RESULTS</div>
+        <div class="section-title">Matching <span>Questions</span></div>
+      </div>
+      <div id="searchResults"></div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+const SECTIONS = ['rag','embeddings','architecture','parser','streaming','auth','database','frontend','system','behavioral'];
+const SECTION_TITLES = {
+  rag: 'RAG & AI Pipeline — 12 Questions',
+  embeddings: 'Embeddings & Vectors — 10 Questions',
+  architecture: 'System Architecture — 10 Questions',
+  parser: 'Code Parsing & AST — 10 Questions',
+  streaming: 'Streaming & SSE — 8 Questions',
+  auth: 'Auth & Security — 10 Questions',
+  database: 'Databases — 10 Questions',
+  frontend: 'React & Frontend — 10 Questions',
+  system: 'Docker & DevOps — 10 Questions',
+  behavioral: 'Behavioral (STAR) — 10 Questions'
+};
+const CRUMB_TITLES = {
+  rag: 'RAG & AI Pipeline', embeddings: 'Embeddings & Vectors',
+  architecture: 'System Architecture', parser: 'Code Parsing & AST',
+  streaming: 'Streaming & SSE', auth: 'Auth & Security',
+  database: 'Databases (MongoDB & ChromaDB)', frontend: 'React & Frontend',
+  system: 'Docker & DevOps', behavioral: 'Behavioral (STAR)'
+};
+
+let currentSection = 'rag';
+
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') === `show('${id}')`) n.classList.add('active');
+  });
+  currentSection = id;
+  document.getElementById('crumb-title').textContent = CRUMB_TITLES[id] || id;
+  document.getElementById('topbar-title').textContent = SECTION_TITLES[id] || id;
+  document.getElementById('searchBox').value = '';
+  window.scrollTo(0, 0);
+}
+
+function toggle(id) {
+  const item = document.getElementById(id);
+  const isOpen = item.classList.contains('open');
+  item.classList.toggle('open', !isOpen);
+}
+
+function expandAll(section) {
+  const sec = document.getElementById('sec-' + section);
+  sec.querySelectorAll('.qa-item').forEach(item => item.classList.add('open'));
+}
+
+function collapseAll(section) {
+  const sec = document.getElementById('sec-' + section);
+  sec.querySelectorAll('.qa-item').forEach(item => item.classList.remove('open'));
+}
+
+function handleSearch() {
+  const query = document.getElementById('searchBox').value.toLowerCase().trim();
+  if (!query) {
+    show(currentSection);
+    return;
+  }
+  // Show search section
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-search').classList.add('active');
+  document.getElementById('crumb-title').textContent = 'Search Results';
+  document.getElementById('topbar-title').textContent = `Results for "${query}"`;
+
+  const allItems = document.querySelectorAll('.qa-item:not(#sec-search .qa-item)');
+  const results = [];
+  allItems.forEach(item => {
+    const qText = item.querySelector('.q-text')?.textContent?.toLowerCase() || '';
+    const aText = item.querySelector('.qa-a')?.textContent?.toLowerCase() || '';
+    if (qText.includes(query) || aText.includes(query)) {
+      results.push(item.cloneNode(true));
+    }
+  });
+
+  const container = document.getElementById('searchResults');
+  if (results.length === 0) {
+    container.innerHTML = '<div class="no-results">🔍 No questions found matching "' + query + '"</div>';
+  } else {
+    container.innerHTML = '<p style="color:var(--text3);font-size:12px;margin-bottom:1rem;font-family:\'JetBrains Mono\',monospace;">' + results.length + ' question(s) found</p>';
+    results.forEach(item => {
+      // Re-attach click handlers after clone
+      const newItem = item;
+      const qaQ = newItem.querySelector('.qa-q');
+      const itemId = newItem.id + '_clone';
+      newItem.id = itemId;
+      qaQ.setAttribute('onclick', `toggle('${itemId}')`);
+      container.appendChild(newItem);
+      newItem.classList.add('open'); // expand all search results
+    });
+  }
+}
+
+// Close search on ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('searchBox').value) {
+    document.getElementById('searchBox').value = '';
+    show(currentSection);
+  }
+});
+</script>
+</body>
+</html>

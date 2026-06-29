@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeInsight AI · Theory Deep Dive & Developer Reflections</title>
+<meta name="description" content="Deep theory explanations, core concepts, problems faced during development, and key learnings from building the CodeInsight AI Copilot project.">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #08090f;
+  --bg2:      #0e1018;
+  --bg3:      #141723;
+  --border:   #1a1f35;
+  --border2:  #222840;
+  --accent:   #7c6af7;
+  --accent2:  #5a49d6;
+  --accent-bg: rgba(124,106,247,0.07);
+  --accent-bg2: rgba(124,106,247,0.14);
+  --green:    #34d399;
+  --green-bg: rgba(52,211,153,0.08);
+  --amber:    #fbbf24;
+  --amber-bg: rgba(251,191,36,0.08);
+  --red:      #f87171;
+  --red-bg:   rgba(248,113,113,0.08);
+  --blue:     #60a5fa;
+  --blue-bg:  rgba(96,165,250,0.08);
+  --pink:     #f472b6;
+  --pink-bg:  rgba(244,114,182,0.08);
+  --cyan:     #22d3ee;
+  --cyan-bg:  rgba(34,211,238,0.08);
+  --text:     #e2e8f0;
+  --text2:    #94a3b8;
+  --text3:    #4a5568;
+  --code-bg:  #060810;
+  --radius:   12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14.5px;
+  line-height: 1.75;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* Layout */
+.shell { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 285px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  padding: 1.5rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-bg2);
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1px solid rgba(124,106,247,0.3);
+  margin-bottom: 10px;
+  letter-spacing: .07em;
+}
+.brand-badge::before { content: '◆'; font-size: 7px; }
+
+.brand-title { font-size: 17px; font-weight: 800; font-family: 'Syne', sans-serif; color: var(--text); line-height: 1.25; }
+.brand-title span { color: var(--accent); }
+.brand-sub { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+
+.sidebar-nav { padding: 0.75rem 0; flex: 1; }
+.nav-section { font-size: 9px; font-weight: 700; letter-spacing: .12em; color: var(--text3); text-transform: uppercase; padding: 12px 1.25rem 4px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 1.25rem;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all .15s;
+  border-left: 2px solid transparent;
+  text-decoration: none;
+}
+.nav-item:hover { color: var(--text); background: var(--bg3); }
+.nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-bg); }
+
+.nav-icon {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  background: var(--bg3);
+  flex-shrink: 0;
+}
+.nav-item.active .nav-icon { background: var(--accent-bg2); }
+
+/* Main */
+.main { flex: 1; min-width: 0; }
+
+.topbar {
+  padding: 0.9rem 2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: rgba(8,9,15,0.92);
+  backdrop-filter: blur(12px);
+  z-index: 50;
+}
+.topbar-crumb { font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+.topbar-crumb span { color: var(--accent); }
+.topbar-actions { display: flex; gap: 8px; }
+
+.btn-sm {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.btn-primary:hover { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+.content { padding: 2.5rem; max-width: 940px; }
+
+.section { display: none; }
+.section.active { display: block; animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Section Header */
+.section-header { margin-bottom: 2rem; }
+.section-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: .1em; margin-bottom: 8px; }
+.section-title { font-size: 36px; font-weight: 800; line-height: 1.1; color: var(--text); font-family: 'Syne', sans-serif; }
+.section-title em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--accent); }
+.section-desc { margin-top: 12px; font-size: 14.5px; color: var(--text2); max-width: 660px; line-height: 1.7; }
+
+/* Cards */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.6rem;
+  margin-bottom: 1.5rem;
+  transition: border-color .2s;
+}
+.card:hover { border-color: var(--border2); }
+.card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 9px; font-family: 'Syne', sans-serif; }
+.card-icon { width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; background: var(--accent-bg2); flex-shrink: 0; }
+
+/* Alert boxes */
+.alert {
+  border-radius: 9px;
+  padding: 1rem 1.2rem;
+  margin: 1.2rem 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  border-left: 3px solid;
+}
+.alert-danger  { background: var(--red-bg);   border-color: var(--red);    color: #fca5a5; }
+.alert-warning { background: var(--amber-bg); border-color: var(--amber);  color: #fde68a; }
+.alert-tip     { background: var(--green-bg); border-color: var(--green);  color: #6ee7b7; }
+.alert-info    { background: var(--blue-bg);  border-color: var(--blue);   color: #bfdbfe; }
+.alert-accent  { background: var(--accent-bg2); border-color: var(--accent); color: #c4b5fd; }
+.alert-cyan    { background: var(--cyan-bg);  border-color: var(--cyan);   color: #a5f3fc; }
+.alert strong  { display: block; margin-bottom: 5px; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; opacity: .7; }
+
+/* Code */
+.code-wrap { margin: 1rem 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border2); }
+.code-header { background: var(--bg3); padding: 7px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.code-lang { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.code-file { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); }
+.copy-btn { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all .12s; }
+.copy-btn:hover { color: var(--accent); background: var(--accent-bg); }
+pre { background: var(--code-bg); padding: 1.2rem 1.3rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.8; color: var(--text); margin: 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+/* Syntax highlight */
+.kw  { color: #a78bfa; }
+.fn  { color: #60a5fa; }
+.st  { color: #34d399; }
+.cm  { color: #374151; font-style: italic; }
+.nb  { color: #fbbf24; }
+.ty  { color: #f472b6; }
+
+/* Theory blocks */
+.theory-block {
+  background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
+  border: 1px solid var(--border2);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.6rem;
+  margin: 1.4rem 0;
+}
+.theory-block h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 0.8rem; font-family: 'Syne', sans-serif; display: flex; align-items: center; gap: 8px; }
+.theory-block p { font-size: 13.5px; color: var(--text2); margin-bottom: 0.7rem; line-height: 1.7; }
+.theory-block p:last-child { margin-bottom: 0; }
+.theory-block ul { padding-left: 1.3rem; color: var(--text2); font-size: 13.5px; }
+.theory-block li { margin-bottom: 6px; line-height: 1.65; }
+
+/* Problem blocks */
+.problem-block {
+  background: var(--red-bg);
+  border: 1px solid rgba(248,113,113,0.25);
+  border-left: 4px solid var(--red);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem;
+  margin: 1rem 0;
+}
+.problem-block h4 { font-size: 13.5px; font-weight: 700; color: #fca5a5; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 7px; }
+.problem-block p { font-size: 13px; color: #fca5a5; opacity: 0.85; line-height: 1.65; margin: 0; }
+
+/* Solution blocks */
+.solution-block {
+  background: var(--green-bg);
+  border: 1px solid rgba(52,211,153,0.25);
+  border-left: 4px solid var(--green);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem;
+  margin: 1rem 0;
+}
+.solution-block h4 { font-size: 13.5px; font-weight: 700; color: #6ee7b7; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 7px; }
+.solution-block p { font-size: 13px; color: #6ee7b7; opacity: 0.85; line-height: 1.65; margin: 0; }
+
+/* Learning blocks */
+.learning-block {
+  background: var(--cyan-bg);
+  border: 1px solid rgba(34,211,238,0.25);
+  border-left: 4px solid var(--cyan);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem;
+  margin: 1rem 0;
+}
+.learning-block h4 { font-size: 13.5px; font-weight: 700; color: #a5f3fc; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 7px; }
+.learning-block p { font-size: 13px; color: #a5f3fc; opacity: 0.85; line-height: 1.65; margin: 0; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 1rem 0; }
+th { background: var(--bg3); color: var(--text2); font-weight: 600; text-align: left; padding: 9px 13px; font-size: 11px; letter-spacing: .04em; border-bottom: 1px solid var(--border2); text-transform: uppercase; }
+td { padding: 9px 13px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; }
+td:first-child { color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg3); }
+
+/* Flow steps */
+.flow { display: flex; flex-direction: column; margin: 1rem 0; }
+.flow-step { display: flex; gap: 14px; align-items: flex-start; }
+.flow-line { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.flow-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex-shrink: 0; box-shadow: 0 0 0 3px var(--accent-bg); }
+.flow-connector { width: 2px; flex: 1; min-height: 18px; background: var(--border2); margin: 2px 0; }
+.flow-content { padding-bottom: 18px; flex: 1; }
+.flow-step:last-child .flow-connector { display: none; }
+.flow-step:last-child .flow-content { padding-bottom: 0; }
+.flow-tag { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-bottom: 5px; letter-spacing: .04em; }
+.tag-client  { background: var(--blue-bg);   color: var(--blue);   border: 1px solid rgba(96,165,250,.2); }
+.tag-server  { background: var(--accent-bg2); color: var(--accent); border: 1px solid rgba(124,106,247,.2); }
+.tag-python  { background: var(--green-bg);   color: var(--green);  border: 1px solid rgba(52,211,153,.2); }
+.tag-db      { background: var(--amber-bg);   color: var(--amber);  border: 1px solid rgba(251,191,36,.2); }
+.tag-llm     { background: var(--pink-bg);    color: var(--pink);   border: 1px solid rgba(244,114,182,.2); }
+.flow-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.flow-desc  { font-size: 13px; color: var(--text2); margin-top: 3px; line-height: 1.6; }
+
+/* Inline code */
+p code, li code, td code { background: var(--bg3); padding: 1px 5px; border-radius: 4px; font-size: 12px; color: var(--accent); border: 1px solid var(--border2); }
+
+p { margin-bottom: 0.85rem; color: var(--text2); font-size: 14px; }
+h3 { font-size: 18px; font-weight: 700; color: var(--text); margin: 1.75rem 0 0.85rem; font-family: 'Syne', sans-serif; }
+h4 { font-size: 14.5px; font-weight: 700; color: var(--text); margin: 1.25rem 0 0.5rem; }
+ul, ol { padding-left: 1.3rem; color: var(--text2); font-size: 14px; }
+li { margin-bottom: 5px; line-height: 1.7; }
+strong { color: var(--text); font-weight: 600; }
+hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+
+/* Comparison grid */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1rem 0; }
+.compare-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; }
+.compare-card h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; margin-top: 0; }
+.compare-card.vs-a { border-top: 2px solid var(--red); }
+.compare-card.vs-a h4 { color: var(--red); }
+.compare-card.vs-b { border-top: 2px solid var(--green); }
+.compare-card.vs-b h4 { color: var(--green); }
+
+/* Emoji label */
+.emoji-label { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .07em; }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .content { padding: 1.5rem 1rem; }
+  .compare-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-badge">CODEINSIGHT AI</div>
+    <div class="brand-title">Theory <span>Deep Dive</span></div>
+    <div class="brand-sub">Concepts · Problems · Learnings</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Core Theory</div>
+    <a class="nav-item active" onclick="show('what-is-rag')"><div class="nav-icon">🧠</div>What is RAG?</a>
+    <a class="nav-item" onclick="show('embeddings-theory')"><div class="nav-icon">📐</div>Embeddings & Vector Space</a>
+    <a class="nav-item" onclick="show('microservices-theory')"><div class="nav-icon">🏗</div>Microservices Architecture</a>
+    <a class="nav-item" onclick="show('streaming-sse')"><div class="nav-icon">⚡</div>Streaming & SSE</a>
+    <a class="nav-item" onclick="show('jwt-auth')"><div class="nav-icon">🔐</div>JWT Authentication</a>
+
+    <div class="nav-section">Data & Storage</div>
+    <a class="nav-item" onclick="show('mongodb-vs-chroma')"><div class="nav-icon">🗄</div>MongoDB vs ChromaDB</a>
+    <a class="nav-item" onclick="show('code-chunking')"><div class="nav-icon">✂</div>Code Chunking Strategy</a>
+    <a class="nav-item" onclick="show('ast-parsing')"><div class="nav-icon">🌲</div>AST Parsing Theory</a>
+
+    <div class="nav-section">AI & LLMs</div>
+    <a class="nav-item" onclick="show('llm-providers')"><div class="nav-icon">🤖</div>LLM Providers Compared</a>
+    <a class="nav-item" onclick="show('prompt-engineering')"><div class="nav-icon">✍</div>Prompt Engineering</a>
+    <a class="nav-item" onclick="show('sentence-transformers')"><div class="nav-icon">🔢</div>Sentence Transformers</a>
+
+    <div class="nav-section">Challenges & Learnings</div>
+    <a class="nav-item" onclick="show('problems-faced')"><div class="nav-icon">⚠</div>Problems I Faced</a>
+    <a class="nav-item" onclick="show('what-i-learned')"><div class="nav-icon">💡</div>What I Learned</a>
+    <a class="nav-item" onclick="show('design-decisions')"><div class="nav-icon">🎯</div>Key Design Decisions</a>
+    <a class="nav-item" onclick="show('future-improvements')"><div class="nav-icon">🚀</div>Future Improvements</a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-crumb">CodeInsight AI › <span id="crumb-title">What is RAG?</span></div>
+    <div class="topbar-actions">
+      <button class="btn-sm" onclick="prevSection()">← Prev</button>
+      <button class="btn-sm btn-primary" onclick="nextSection()">Next →</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══════ WHAT IS RAG ═══════ -->
+    <div class="section active" id="sec-what-is-rag">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — AI</div>
+        <div class="section-title">What is <em>RAG</em>?</div>
+        <div class="section-desc">Retrieval-Augmented Generation — the fundamental AI architecture powering CodeInsight's chat feature. Understanding this is essential for explaining the entire project.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>🧠 The Core Problem RAG Solves</h3>
+        <p>Large Language Models (LLMs) like GPT-4 or Llama-3 are trained on data up to a cutoff date. They have <strong>no knowledge of your private codebase</strong>. If you ask "How does authentication work in my project?", a plain LLM will hallucinate an answer.</p>
+        <p><strong>RAG solves this</strong> by <em>retrieving</em> the relevant code chunks first, then feeding them as context to the LLM — so the model answers from your actual code, not from its training data.</p>
+      </div>
+
+      <div class="alert alert-accent">
+        <strong>🎯 One-line definition</strong>
+        RAG = <strong>Retrieve</strong> relevant documents from a vector store → <strong>Augment</strong> the LLM prompt with those documents → <strong>Generate</strong> a grounded answer.
+      </div>
+
+      <h3>The RAG Pipeline in CodeInsight</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag tag-client">USER INPUT</span>
+            <div class="flow-title">User types a question in the chat panel</div>
+            <div class="flow-desc">e.g. "How does the repository parser extract symbols from Python files?"</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag tag-python">EMBEDDING</span>
+            <div class="flow-title">Query → Dense Vector</div>
+            <div class="flow-desc">The question is encoded by <code>sentence-transformers</code> (all-MiniLM-L6-v2) into a 384-dimensional float vector — a point in semantic space.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag tag-db">RETRIEVAL</span>
+            <div class="flow-title">Approximate Nearest Neighbor Search in ChromaDB</div>
+            <div class="flow-desc">ChromaDB finds the top-8 code chunks whose embedding vectors are geometrically closest to the query vector. Similarity is measured by cosine distance — chunks that talk about "Python symbol extraction" cluster near the query.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag tag-server">AUGMENTATION</span>
+            <div class="flow-title">Build the Prompt with Context Injection</div>
+            <div class="flow-desc">The <code>_build_prompt()</code> function injects the retrieved code chunks verbatim into the LLM prompt: "Answer using ONLY the retrieved code context. [1] services/repository-parser-service/main.py:198-206\n..."</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag tag-llm">GENERATION</span>
+            <div class="flow-title">LLM Streams the Answer Token-by-Token</div>
+            <div class="flow-desc">Groq / Gemini / OpenRouter generates an answer grounded in the provided context. Tokens stream via SSE back to the browser.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div></div>
+          <div class="flow-content">
+            <span class="flow-tag tag-client">CITATIONS</span>
+            <div class="flow-title">Citations Sent After Completion</div>
+            <div class="flow-desc">After the last token, a <code>citations</code> SSE event sends the filePath, startLine, endLine for every chunk used — shown in the UI as source links.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="theory-block">
+        <h3>📐 Why Vector Similarity Works for Code</h3>
+        <p>Neural embeddings map semantically similar text to nearby points in high-dimensional space. The query "extract Python symbols" and the code chunk containing <code>ast.walk(tree)</code> for extracting class/function nodes will land close together because the model learned that AST-walking relates to symbol extraction during pre-training.</p>
+        <p>This is fundamentally different from keyword search (BM25/TFIDF) which would only find chunks that literally contain the words "Python" and "symbols". Vector search finds conceptually related chunks even if they use different terminology.</p>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card vs-a">
+          <h4>❌ Keyword Search (Old Way)</h4>
+          <ul>
+            <li>Matches exact words only</li>
+            <li>Misses synonyms / paraphrasing</li>
+            <li>"extract functions" won't find <code>ast.FunctionDef</code></li>
+            <li>Fast but semantically shallow</li>
+          </ul>
+        </div>
+        <div class="compare-card vs-b">
+          <h4>✅ Vector Search (RAG Way)</h4>
+          <ul>
+            <li>Matches semantic meaning</li>
+            <li>Finds conceptually related code</li>
+            <li>"extract functions" WILL find <code>ast.FunctionDef</code> chunks</li>
+            <li>Slightly slower but deeply relevant</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ EMBEDDINGS THEORY ═══════ -->
+    <div class="section" id="sec-embeddings-theory">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — ML</div>
+        <div class="section-title">Embeddings & <em>Vector Space</em></div>
+        <div class="section-desc">How raw text becomes a mathematical point in space, and why that enables semantic search over your entire codebase.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>📐 What is an Embedding?</h3>
+        <p>An embedding is a <strong>fixed-size list of floating-point numbers</strong> (a vector) that represents the meaning of a piece of text. In this project, <code>all-MiniLM-L6-v2</code> produces 384-dimensional vectors.</p>
+        <p>Think of it like GPS coordinates for meaning: the text "function to parse imports" and actual code that parses import statements will produce coordinates that are very close to each other in 384-dimensional space, even if they share no literal words.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🔢</div>Embedding Dimensions in This Project</div>
+        <table>
+          <tr><th>Model</th><th>Dimensions</th><th>When Used</th></tr>
+          <tr><td>all-MiniLM-L6-v2</td><td>384</td><td>Default — fast, efficient for code search</td></tr>
+          <tr><td>CodeBERT</td><td>768</td><td>Optional — better at code-specific semantics</td></tr>
+          <tr><td>Hash fallback (offline)</td><td>384</td><td>No model loaded — deterministic bag-of-words approximation</td></tr>
+        </table>
+      </div>
+
+      <h3>The Embedding Pipeline in Code</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python</span><span class="code-file">services/common/embeddings.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="cm"># Step 1: Lazy-load model with LRU cache (loads only once in memory)</span>
+<span class="kw">@lru_cache</span>(maxsize=<span class="nb">1</span>)
+<span class="kw">def</span> <span class="fn">_load_sentence_transformer</span>():
+    model_name = os.<span class="fn">getenv</span>(<span class="st">"EMBEDDING_MODEL"</span>, <span class="st">"all-MiniLM-L6-v2"</span>)
+    <span class="kw">return</span> <span class="ty">SentenceTransformer</span>(model_name)
+
+<span class="cm"># Step 2: Encode text to vector</span>
+<span class="kw">def</span> <span class="fn">embed_texts</span>(texts: list[str]) -> list[list[float]]:
+    model = <span class="fn">_load_sentence_transformer</span>()
+    vectors = model.<span class="fn">encode</span>(texts, normalize_embeddings=<span class="kw">True</span>)
+    <span class="kw">return</span> vectors.<span class="fn">tolist</span>()  <span class="cm"># NumPy → Python list for JSON serialization</span></pre>
+      </div>
+
+      <div class="theory-block">
+        <h3>🎯 Why normalize_embeddings=True?</h3>
+        <p>L2-normalizing vectors (dividing each by its magnitude) ensures all vectors lie on the surface of a unit hypersphere. This makes <strong>cosine similarity identical to dot-product similarity</strong>, which ChromaDB can compute faster using HNSW (Hierarchical Navigable Small World) graphs.</p>
+        <p>Without normalization, two conceptually similar but differently-worded texts might have very different magnitudes, throwing off similarity calculations.</p>
+      </div>
+
+      <div class="theory-block">
+        <h3>🔄 The Fallback Hash Embedding</h3>
+        <p>When the ML model can't load (offline development, no GPU/memory), <code>_hash_embedding()</code> creates a <em>deterministic approximation</em>: it tokenizes the text, SHA-256-hashes each token, maps hashes to vector positions, increments those positions, then L2-normalizes. It's not semantic, but it's consistent — the same text always produces the same vector, so retrieval still works (poorly).</p>
+      </div>
+
+      <h3>How Vectors are Stored — The Embedding Text Format</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python</span><span class="code-file">services/embedding-service/main.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="cm"># Prepend metadata to enrich the semantic signal before embedding</span>
+<span class="kw">def</span> <span class="fn">_embedding_text</span>(chunk: dict) -> str:
+    symbol = chunk.<span class="fn">get</span>(<span class="st">"symbol"</span>) <span class="kw">or</span> {}
+    <span class="kw">return</span> <span class="st">"\n"</span>.<span class="fn">join</span>([
+        <span class="st">f"file: {chunk['filePath']}"</span>,      <span class="cm"># path context</span>
+        <span class="st">f"language: {chunk['language']}"</span>,  <span class="cm"># language context</span>
+        <span class="st">f"symbol: {symbol.get('name', '')}"</span>,<span class="cm"># symbol name context</span>
+        chunk[<span class="st">"content"</span>],                  <span class="cm"># the actual source code</span>
+    ])</pre>
+      </div>
+
+      <div class="alert alert-tip">
+        <strong>💡 Design Insight</strong>
+        By prepending <code>file:</code>, <code>language:</code>, and <code>symbol:</code> metadata before encoding, the model learns to associate those tokens with the code's meaning. A query like "Python function that parses imports" will retrieve chunks with <code>language: Python</code> and code about import parsing even closer together.
+      </div>
+    </div>
+
+    <!-- ═══════ MICROSERVICES THEORY ═══════ -->
+    <div class="section" id="sec-microservices-theory">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — ARCHITECTURE</div>
+        <div class="section-title">Microservices <em>Architecture</em></div>
+        <div class="section-desc">Why CodeInsight is split into multiple independent services instead of one monolith, and what tradeoffs that creates.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>🏗 Monolith vs Microservices</h3>
+        <p>A <strong>monolith</strong> bundles everything — parsing, embedding, RAG, auth, UI — into one deployable unit. Simple to start, but as it grows, one slow operation (like loading a 400MB ML model) blocks everything else.</p>
+        <p><strong>Microservices</strong> split the system into small, independently deployable services that communicate over HTTP/REST. Each service owns its domain, scales independently, and can be written in the best language for that job.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🎯</div>Why Each Service Exists as a Separate Process</div>
+        <table>
+          <tr><th>Service</th><th>Language</th><th>Why Separate?</th></tr>
+          <tr><td>React Client</td><td>TypeScript</td><td>Runs in browser — completely separate runtime</td></tr>
+          <tr><td>Node/Express Gateway</td><td>TypeScript</td><td>Best ecosystem for JWT, MongoDB, HTTP proxy</td></tr>
+          <tr><td>Repository Parser</td><td>Python</td><td>AST parsing libraries (ast module) are Python-native</td></tr>
+          <tr><td>Embedding Service</td><td>Python</td><td>sentence-transformers runs on Python/PyTorch</td></tr>
+          <tr><td>RAG Service</td><td>Python</td><td>Async streaming, ChromaDB Python client</td></tr>
+          <tr><td>Documentation Service</td><td>Python</td><td>LLM API calls, document generation logic</td></tr>
+          <tr><td>Analysis Service</td><td>Python</td><td>Graph analysis, architecture visualization data</td></tr>
+        </table>
+      </div>
+
+      <div class="theory-block">
+        <h3>🔧 The Shared Common Module Pattern</h3>
+        <p>All Python services import from <code>services/common/</code>. This directory contains <code>embeddings.py</code>, <code>llm.py</code>, <code>vector_store.py</code>, and <code>models.py</code>. In Docker, this directory is mounted into every service container and added to <code>PYTHONPATH</code>.</p>
+        <p>This is a deliberate design to avoid copy-paste across services. <strong>DRY (Don't Repeat Yourself)</strong> principle applied at the microservice level.</p>
+      </div>
+
+      <h3>Service Communication Pattern</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">YAML</span><span class="code-file">docker-compose.yml (conceptual)</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="cm"># Services communicate via Docker bridge network by service name</span>
+<span class="st">PARSER_URL</span>: http://repository-parser:8101
+<span class="st">EMBEDDING_URL</span>: http://embedding-service:8102
+<span class="st">RAG_URL</span>: http://rag-service:8103
+
+<span class="cm"># Node gateway makes HTTP calls to Python services:</span>
+<span class="cm"># const res = await fetch(`${PARSER_URL}/parse`, { method: 'POST', body: JSON.stringify(payload) })</span></pre>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card vs-a">
+          <h4>❌ Monolith Tradeoffs</h4>
+          <ul>
+            <li>ML model loaded in Node process (wrong language)</li>
+            <li>One crash takes down everything</li>
+            <li>Must deploy all at once</li>
+            <li>Can't scale parser without scaling chat</li>
+          </ul>
+        </div>
+        <div class="compare-card vs-b">
+          <h4>✅ Microservices Tradeoffs</h4>
+          <ul>
+            <li>Each service in its best language</li>
+            <li>Parser crash doesn't affect chat</li>
+            <li>Deploy/scale independently</li>
+            <li>Docker Compose manages it all</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ STREAMING SSE ═══════ -->
+    <div class="section" id="sec-streaming-sse">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — NETWORKING</div>
+        <div class="section-title">Streaming & <em>Server-Sent Events</em></div>
+        <div class="section-desc">How tokens flow from the LLM to the user's browser in real-time — the technology behind the ChatGPT-style typing effect.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>⚡ Why Not Just Return the Full Response?</h3>
+        <p>LLM responses can take 10-30 seconds for complex code questions. Without streaming, the user stares at a blank screen. With streaming, they see tokens appear immediately — perceived latency drops dramatically and the UX feels alive.</p>
+        <p>The alternative (WebSockets) requires a persistent bidirectional connection. SSE (Server-Sent Events) is simpler: one-way server-to-client push over a standard HTTP connection.</p>
+      </div>
+
+      <h3>SSE Protocol Deep Dive</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">HTTP Response Body (raw SSE)</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre>Content-Type: text/event-stream
+Cache-Control: no-cache
+
+<span class="cm"># Each chunk sent by the RAG service:</span>
+data: The\n\n
+data: repository\n\n
+data: parser\n\n
+
+<span class="cm"># After all tokens:</span>
+event: citations\n
+data: [{"filePath":"services/...","startLine":198,"endLine":206}]\n\n
+
+event: done\n
+data: {}\n\n</pre>
+      </div>
+
+      <div class="theory-block">
+        <h3>🔄 The Token Escape Problem</h3>
+        <p>SSE uses <code>\n\n</code> (double newline) to delimit events. LLM tokens can contain literal newlines — which would prematurely terminate an event. The fix in <code>rag-service/main.py</code>:</p>
+        <p><code>escaped_token = token.replace("\n", "\\n")</code></p>
+        <p>The client then reverses this: <code>content = content.replaceAll("\\n", "\n")</code> to reconstruct proper newlines for display.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python · FastAPI</span><span class="code-file">services/rag-service/main.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="kw">async def</span> <span class="fn">events</span>():
+    <span class="cm"># Stream each LLM token as a separate SSE event</span>
+    <span class="kw">async for</span> token <span class="kw">in</span> <span class="fn">stream_complete</span>(prompt):
+        escaped = token.<span class="fn">replace</span>(<span class="st">"\n"</span>, <span class="st">"\\n"</span>)   <span class="cm"># prevent event termination</span>
+        <span class="kw">yield</span> <span class="st">f"data: {escaped}\n\n"</span>
+
+    <span class="cm"># Send citations after completion</span>
+    <span class="kw">yield</span> <span class="st">f"event: citations\ndata: {json.dumps(citations)}\n\n"</span>
+    <span class="kw">yield</span> <span class="st">"event: done\ndata: {}\n\n"</span>
+
+<span class="kw">return</span> <span class="ty">StreamingResponse</span>(<span class="fn">events</span>(), media_type=<span class="st">"text/event-stream"</span>)</pre>
+      </div>
+
+      <div class="alert alert-info">
+        <strong>📡 CORS & Proxy Configuration</strong>
+        In development, Vite's proxy (<code>vite.config.ts</code>) forwards <code>/api</code> requests to port 8080 (Node gateway). The gateway then proxies SSE streams to port 8103 (RAG service). In production (Docker), all services are on the same Docker bridge network.
+      </div>
+    </div>
+
+    <!-- ═══════ JWT AUTH ═══════ -->
+    <div class="section" id="sec-jwt-auth">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — SECURITY</div>
+        <div class="section-title">JWT <em>Authentication</em></div>
+        <div class="section-desc">How stateless token-based authentication works, why it's preferred over sessions, and how it's implemented in the Express gateway.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>🔐 Session vs Token Authentication</h3>
+        <p><strong>Session-based auth</strong>: Server stores a session ID in memory/database. Every request hits the DB to validate the session. Hard to scale horizontally (which server holds the session?).</p>
+        <p><strong>JWT (JSON Web Token)</strong>: The server signs a token with a secret key. Any server can verify the token by checking the signature — no DB lookup required. Stateless and horizontally scalable.</p>
+      </div>
+
+      <div class="theory-block">
+        <h3>📦 JWT Structure</h3>
+        <p>A JWT has 3 base64-encoded parts separated by dots: <code>header.payload.signature</code></p>
+        <ul>
+          <li><strong>Header</strong>: Algorithm used (<code>HS256</code>) and token type (<code>JWT</code>)</li>
+          <li><strong>Payload</strong>: Claims — <code>{ sub: userId, iat: timestamp, exp: timestamp }</code></li>
+          <li><strong>Signature</strong>: HMAC-SHA256(<code>header.payload</code>, <code>JWT_SECRET</code>) — proves server issued it</li>
+        </ul>
+        <p>The signature is what makes it tamper-proof. Change any bit of the payload, and the signature won't match.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">TypeScript</span><span class="code-file">server/src/middleware/auth.ts</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="cm">// Middleware: extract token from Authorization header, verify, attach user</span>
+<span class="kw">export const</span> <span class="fn">requireAuth</span> = (req, res, next) => {
+  <span class="kw">const</span> token = req.headers.authorization?.<span class="fn">split</span>(<span class="st">' '</span>)[<span class="nb">1</span>]; <span class="cm">// "Bearer <token>"</span>
+  <span class="kw">if</span> (!token) <span class="kw">return</span> res.<span class="fn">status</span>(<span class="nb">401</span>).<span class="fn">json</span>({ error: <span class="st">'No token'</span> });
+  
+  <span class="kw">try</span> {
+    <span class="kw">const</span> payload = jwt.<span class="fn">verify</span>(token, process.env.JWT_SECRET);
+    req.userId = payload.sub; <span class="cm">// attach userId to request</span>
+    <span class="fn">next</span>();
+  } <span class="kw">catch</span> {
+    res.<span class="fn">status</span>(<span class="nb">401</span>).<span class="fn">json</span>({ error: <span class="st">'Invalid token'</span> });
+  }
+};</pre>
+      </div>
+
+      <div class="alert alert-warning">
+        <strong>⚠️ Security Note — bcrypt rounds</strong>
+        This project uses <code>bcrypt.hash(password, 10)</code>. The cost factor (10) means the hashing takes ~100ms — slow enough to make brute-force impractical, fast enough for user registration. Higher values increase security but also increase latency.
+      </div>
+    </div>
+
+    <!-- ═══════ MONGODB VS CHROMA ═══════ -->
+    <div class="section" id="sec-mongodb-vs-chroma">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — DATA STORAGE</div>
+        <div class="section-title">MongoDB <em>vs</em> ChromaDB</div>
+        <div class="section-desc">Why this project needs TWO databases and what each one is responsible for.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🗄</div>Responsibility Split</div>
+        <table>
+          <tr><th>What's Stored</th><th>Where</th><th>Why</th></tr>
+          <tr><td>User accounts</td><td>MongoDB</td><td>Structured document — email, hash, timestamps</td></tr>
+          <tr><td>Repository metadata</td><td>MongoDB</td><td>Status, owner, name — structured data</td></tr>
+          <tr><td>Chat history</td><td>MongoDB</td><td>Ordered message arrays with roles and citations</td></tr>
+          <tr><td>Code chunk vectors</td><td>ChromaDB</td><td>Vector similarity search — MongoDB can't do this</td></tr>
+          <tr><td>Code chunk text</td><td>ChromaDB</td><td>Stored alongside vectors for retrieval</td></tr>
+        </table>
+      </div>
+
+      <div class="theory-block">
+        <h3>🔵 What is ChromaDB?</h3>
+        <p>ChromaDB is an <strong>AI-native vector database</strong> specifically designed to store high-dimensional embedding vectors and perform fast approximate nearest neighbor (ANN) search using HNSW (Hierarchical Navigable Small World) graphs.</p>
+        <p>When you call <code>collection.query(query_embeddings=[...], n_results=8)</code>, ChromaDB traverses the HNSW graph to find the 8 vectors closest to your query vector in O(log N) time — far faster than brute-force L2 distance computation over all chunks.</p>
+      </div>
+
+      <div class="theory-block">
+        <h3>📦 MongoDB — Document Model</h3>
+        <p>MongoDB stores data as <strong>BSON documents</strong> (binary JSON). Its flexible schema is perfect for the <code>analysis</code> field in the Repository document, which stores the entire <code>RepositoryAnalysis</code> object (variable structure depending on the repo). Mongoose adds schema validation and TypeScript typing on top.</p>
+        <p>Key decision: repository analysis results are stored in MongoDB (not just ChromaDB) so the Node gateway can serve file trees, symbol lists, and dependency edges without querying the Python services again.</p>
+      </div>
+
+      <div class="alert alert-info">
+        <strong>🔑 Isolation by Repository ID</strong>
+        ChromaDB uses a separate <em>collection</em> per repository: <code>repo_{repository_id}</code>. This means you can delete a specific repository's vectors without affecting others, and semantic search is always scoped to the current repo.
+      </div>
+    </div>
+
+    <!-- ═══════ CODE CHUNKING ═══════ -->
+    <div class="section" id="sec-code-chunking">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — RAG PIPELINE</div>
+        <div class="section-title">Code <em>Chunking Strategy</em></div>
+        <div class="section-desc">Why and how the repository parser splits files into chunks — the most critical decision affecting RAG retrieval quality.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>✂ Why Chunk at All?</h3>
+        <p>LLM context windows are limited (8K to 200K tokens). A codebase might have 500+ files, millions of tokens. You cannot embed an entire repo in one vector — that loses locality. You cannot include an entire file as context — that wastes the LLM's context window.</p>
+        <p><strong>Chunking</strong> breaks files into semantically meaningful units that are small enough to embed precisely and large enough to contain useful context.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🔍</div>Two-Pass Chunking Strategy</div>
+        <div style="margin-top:0.5rem">
+          <p><strong>Pass 1 — Symbol-Level Chunks:</strong> For each detected function/class, create a chunk covering exactly that symbol's line range. This ensures the embedding captures the full function context.</p>
+          <p><strong>Pass 2 — Sliding Window Chunks:</strong> For lines NOT covered by symbols (config files, scripts, top-level code), create 120-line overlapping windows to ensure nothing is missed.</p>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python</span><span class="code-file">services/repository-parser-service/main.py · _chunk_file()</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="kw">def</span> <span class="fn">_chunk_file</span>(repo_id, file_path, language, lines, imports, symbols):
+    chunks = []
+    
+    <span class="cm"># Pass 1: Symbol-level chunks (functions, classes)</span>
+    <span class="kw">for</span> symbol <span class="kw">in</span> sorted(symbols, key=<span class="kw">lambda</span> s: s.startLine):
+        content = <span class="st">"\n"</span>.<span class="fn">join</span>(lines[symbol.startLine<span class="nb">-1</span>:symbol.endLine])
+        <span class="kw">if</span> content.<span class="fn">strip</span>():
+            chunks.<span class="fn">append</span>(<span class="fn">_chunk</span>(repo_id, file_path, language,
+                                    symbol.startLine, symbol.endLine, content, imports, symbol))
+
+    <span class="cm"># Pass 2: Sliding window for uncovered lines</span>
+    window = <span class="nb">120</span>
+    <span class="kw">for</span> start <span class="kw">in</span> range(<span class="nb">1</span>, len(lines)+<span class="nb">1</span>, window):
+        end = min(start + window - <span class="nb">1</span>, len(lines))
+        content = <span class="st">"\n"</span>.<span class="fn">join</span>(lines[start<span class="nb">-1</span>:end])
+        <span class="kw">if</span> content.<span class="fn">strip</span>():
+            chunks.<span class="fn">append</span>(<span class="fn">_chunk</span>(repo_id, file_path, language, start, end, content, imports, <span class="kw">None</span>))
+    
+    <span class="kw">return</span> chunks</pre>
+      </div>
+
+      <div class="theory-block">
+        <h3>🔑 Chunk ID Generation</h3>
+        <p>Each chunk gets a <strong>deterministic SHA-1 ID</strong>: <code>sha1(f"{file_path}:{start}:{end}:{content[:80]}")</code>. This enables <strong>idempotent upserts</strong> to ChromaDB — if you re-index the same file, the same chunks produce the same IDs, so they overwrite rather than duplicate.</p>
+        <p>The deduplication step (<code>seen_chunk_ids = set()</code>) before calling ChromaDB prevents <code>DuplicateIDError</code> when the same symbol appears in multiple passes.</p>
+      </div>
+    </div>
+
+    <!-- ═══════ AST PARSING ═══════ -->
+    <div class="section" id="sec-ast-parsing">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — CODE ANALYSIS</div>
+        <div class="section-title">AST <em>Parsing Theory</em></div>
+        <div class="section-desc">How the repository parser understands code structure — the difference between regex-based and AST-based symbol extraction.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>🌲 What is an AST?</h3>
+        <p>An <strong>Abstract Syntax Tree (AST)</strong> is a tree representation of the syntactic structure of source code. Each node represents a construct (function definition, class, import statement, expression). The AST strips away irrelevant details (whitespace, comments) and exposes the code's grammar.</p>
+        <p>Python's built-in <code>ast</code> module can parse any valid Python source into an AST in microseconds. This is far more reliable than regex for extracting class/function names because it understands the language's grammar.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python</span><span class="code-file">AST Parsing vs Regex</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="cm"># AST approach (reliable, grammar-aware):</span>
+tree = ast.<span class="fn">parse</span>(content)
+<span class="kw">for</span> node <span class="kw">in</span> ast.<span class="fn">walk</span>(tree):
+    <span class="kw">if isinstance</span>(node, ast.FunctionDef):
+        <span class="cm"># Exact line numbers, handles decorators, async, nested functions</span>
+        symbols.<span class="fn">append</span>(CodeSymbol(name=node.name, startLine=node.lineno, ...))
+
+<span class="cm"># Regex approach (fragile, used for non-Python languages):</span>
+pattern = re.<span class="fn">compile</span>(<span class="st">r"^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_][\w]*)"</span>, re.MULTILINE)
+<span class="cm"># Fails on: inline functions, arrow functions, methods, overloaded functions</span></pre>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-card vs-a">
+          <h4>❌ Regex Limitations</h4>
+          <ul>
+            <li>Can't handle multi-line declarations</li>
+            <li>Fails on complex nesting</li>
+            <li>Language-specific — must write per-language regex</li>
+            <li>No accurate line range detection</li>
+          </ul>
+        </div>
+        <div class="compare-card vs-b">
+          <h4>✅ AST Advantages</h4>
+          <ul>
+            <li>Grammar-aware — handles any valid syntax</li>
+            <li>Precise <code>lineno</code> and <code>end_lineno</code></li>
+            <li>Handles decorators, async, nested defs</li>
+            <li>Tree structure reveals containment</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="alert alert-warning">
+        <strong>⚠️ Why Regex for JS/TS?</strong>
+        Python's <code>ast</code> module only works for Python. For JavaScript/TypeScript, a proper parser (like Babel, acorn, or tree-sitter) would be ideal. This project uses regex as a pragmatic simplification — it catches the common patterns (class declarations, function declarations, Express routes) but misses arrow functions and complex patterns.
+      </div>
+    </div>
+
+    <!-- ═══════ LLM PROVIDERS ═══════ -->
+    <div class="section" id="sec-llm-providers">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — AI INTEGRATION</div>
+        <div class="section-title">LLM <em>Providers Compared</em></div>
+        <div class="section-desc">How the multi-provider LLM abstraction works and why each provider has different characteristics for code Q&A tasks.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>🤖 The Provider Abstraction Layer</h3>
+        <p>The <code>common/llm.py</code> module implements a <strong>Strategy Pattern</strong>: a single <code>stream_complete(prompt)</code> interface that routes to different provider implementations based on <code>LLM_PROVIDER</code> environment variable. Swapping providers requires only a config change — no code changes.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🤖</div>Provider Comparison for Code Q&A</div>
+        <table>
+          <tr><th>Provider</th><th>Model</th><th>Speed</th><th>Quality</th><th>Cost</th><th>Best For</th></tr>
+          <tr><td>Groq</td><td>Llama-3.3-70B</td><td>⚡ Very fast</td><td>Good</td><td>Free tier</td><td>Development, speed-critical</td></tr>
+          <tr><td>Gemini</td><td>Gemini-1.5-Pro</td><td>Medium</td><td>Excellent</td><td>Pay per token</td><td>Large context, complex code</td></tr>
+          <tr><td>OpenRouter</td><td>Claude-3.5-Sonnet</td><td>Medium</td><td>Excellent</td><td>Pay per token</td><td>Production code understanding</td></tr>
+          <tr><td>Mock (offline)</td><td>None</td><td>Instant</td><td>Returns raw context</td><td>Free</td><td>Offline dev, testing</td></tr>
+        </table>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python</span><span class="code-file">services/common/llm.py — Provider routing</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="kw">async def</span> <span class="fn">stream_complete</span>(prompt: str) -> AsyncIterator[str]:
+    provider = os.<span class="fn">getenv</span>(<span class="st">"LLM_PROVIDER"</span>, <span class="st">"mock"</span>).<span class="fn">lower</span>()
+
+    <span class="cm"># Route to correct provider implementation</span>
+    <span class="kw">if</span> provider == <span class="st">"groq"</span> <span class="kw">and</span> os.<span class="fn">getenv</span>(<span class="st">"GROQ_API_KEY"</span>):
+        <span class="kw">async for</span> token <span class="kw">in</span> <span class="fn">_stream_openai_compatible</span>(GROQ_URL, ...):
+            <span class="kw">yield</span> token; <span class="kw">return</span>
+
+    <span class="kw">if</span> provider == <span class="st">"gemini"</span> <span class="kw">and</span> os.<span class="fn">getenv</span>(<span class="st">"GEMINI_API_KEY"</span>):
+        <span class="kw">yield await</span> <span class="fn">_complete_gemini</span>(prompt, system); <span class="kw">return</span>
+
+    <span class="cm"># Fallback: return the context itself (no LLM needed)</span>
+    <span class="kw">yield</span> <span class="fn">_offline_answer</span>(prompt)</pre>
+      </div>
+
+      <div class="alert alert-tip">
+        <strong>💡 OpenAI-Compatible APIs</strong>
+        Groq and OpenRouter both implement the OpenAI Chat Completions API format. This means the same <code>_stream_openai_compatible()</code> function handles both — the only differences are the URL and API key. This is an intentional industry pattern enabling easy provider switching.
+      </div>
+    </div>
+
+    <!-- ═══════ PROMPT ENGINEERING ═══════ -->
+    <div class="section" id="sec-prompt-engineering">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — AI QUALITY</div>
+        <div class="section-title">Prompt <em>Engineering</em></div>
+        <div class="section-desc">How the RAG prompt is structured to maximize answer quality and prevent hallucinations.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>✍ The RAG Prompt Template</h3>
+        <p>Prompt engineering for RAG has specific challenges: you must ground the LLM in the provided context and prevent it from "leaking" its pretrained knowledge when the context is insufficient.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Python</span><span class="code-file">services/rag-service/main.py · _build_prompt()</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <pre><span class="kw">def</span> <span class="fn">_build_prompt</span>(query: str, contexts: list[dict]) -> str:
+    context_text = <span class="st">"\n\n"</span>.<span class="fn">join</span>(
+        <span class="st">f"[{idx+1}] {item['metadata']['filePath']}:{item['metadata']['startLine']}"</span>
+        <span class="st">f"-{item['metadata']['endLine']}\n{item['content']}"</span>
+        <span class="kw">for</span> idx, item <span class="kw">in</span> <span class="fn">enumerate</span>(contexts)
+    )
+    <span class="kw">return</span> <span class="st">f"""Answer the developer's repository question using ONLY the retrieved code context.
+Be specific, cite file paths and line ranges, and call out uncertainty.
+
+Question:
+{query}
+
+Retrieved context:
+{context_text}"""</span></pre>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🎯</div>Key Prompt Decisions & Why</div>
+        <table>
+          <tr><th>Prompt Element</th><th>Purpose</th></tr>
+          <tr><td>"using ONLY the retrieved context"</td><td>Prevents hallucination — forces grounding in actual code</td></tr>
+          <tr><td>"cite file paths and line ranges"</td><td>Forces the model to reference specific code locations</td></tr>
+          <tr><td>"call out uncertainty"</td><td>Makes the model say "I don't see this in the context" instead of guessing</td></tr>
+          <tr><td>Numbered context blocks [1] [2]...</td><td>Makes it easy for the model to reference specific chunks</td></tr>
+          <tr><td>filePath:startLine-endLine header</td><td>Tells the model exactly where each chunk comes from</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════ SENTENCE TRANSFORMERS ═══════ -->
+    <div class="section" id="sec-sentence-transformers">
+      <div class="section-header">
+        <div class="section-num">CORE CONCEPT — ML MODELS</div>
+        <div class="section-title"><em>Sentence Transformers</em> & CodeBERT</div>
+        <div class="section-desc">The ML models that power semantic search — how they work and why they're suited for code.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>🔢 How Sentence Transformers Work</h3>
+        <p>Sentence Transformers are BERT-based models fine-tuned on a contrastive learning objective: similar sentences are pulled together in embedding space, dissimilar ones are pushed apart. The result is an encoder that maps variable-length text to a fixed-size vector.</p>
+        <p><code>all-MiniLM-L6-v2</code> is a 6-layer MiniLM model distilled from a larger teacher. It's 80MB, runs on CPU, produces 384-dimensional embeddings in ~5ms per batch, making it practical for development without GPUs.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🧠</div>Model Architecture Comparison</div>
+        <table>
+          <tr><th>Property</th><th>all-MiniLM-L6-v2</th><th>CodeBERT</th></tr>
+          <tr><td>Parameters</td><td>22M</td><td>125M</td></tr>
+          <tr><td>Embedding dim</td><td>384</td><td>768</td></tr>
+          <tr><td>Training data</td><td>1B+ sentence pairs</td><td>CodeSearchNet (6 languages)</td></tr>
+          <tr><td>Speed (CPU)</td><td>Very fast</td><td>Slower (~5x)</td></tr>
+          <tr><td>Best for</td><td>Natural language + code hybrid</td><td>Pure code understanding</td></tr>
+        </table>
+      </div>
+
+      <div class="theory-block">
+        <h3>🎯 Why MiniLM Works for Code Search</h3>
+        <p>Despite being trained primarily on natural language, MiniLM works surprisingly well for code because: (1) code comments and docstrings are natural language, (2) function/variable names are natural language tokens, and (3) the training includes technical text that shares vocabulary with code (GitHub READMEs, Stack Overflow).</p>
+        <p>CodeBERT is the correct choice for purely code-to-code search (e.g., "find functions similar to this snippet"), but for the natural-language-to-code use case in RAG, MiniLM's speed advantage makes it the better default.</p>
+      </div>
+    </div>
+
+    <!-- ═══════ PROBLEMS FACED ═══════ -->
+    <div class="section" id="sec-problems-faced">
+      <div class="section-header">
+        <div class="section-num">REAL-WORLD EXPERIENCE</div>
+        <div class="section-title">Problems <em>I Faced</em></div>
+        <div class="section-desc">Honest account of the challenges encountered during development — the kind of things that don't show up in tutorials but come up in every production project.</div>
+      </div>
+
+      <div class="alert alert-accent">
+        <strong>💬 Interview Tip</strong>
+        Talking about real problems you solved shows engineering maturity. These are exactly the stories interviewers want to hear — "tell me about a technical challenge you overcame."
+      </div>
+
+      <h3>Problem 1: ChromaDB DuplicateIDError</h3>
+      <div class="problem-block">
+        <h4>🔴 The Problem</h4>
+        <p>When the chunking pipeline ran on large repositories, the same code chunk was being generated multiple times — once from the symbol-level pass and once from the sliding window pass when they overlapped on the same line ranges. Sending duplicate IDs to ChromaDB's <code>upsert()</code> within the same batch caused a <code>DuplicateIDError</code>, crashing the entire embedding pipeline.</p>
+      </div>
+      <div class="solution-block">
+        <h4>✅ The Fix</h4>
+        <p>Added a deduplication step in the parser before returning chunks: iterate through all generated chunks, track seen IDs in a Python <code>set()</code>, and skip any chunk whose ID was already seen. The SHA-1 chunk ID (hash of path + line range + content prefix) acts as a content-addressable key that catches exact duplicates while allowing distinct overlapping windows.</p>
+      </div>
+      <div class="learning-block">
+        <h4>💡 What I Learned</h4>
+        <p>Always design for idempotency in data pipelines. Use content-addressable IDs (hash-based) so re-runs overwrite rather than duplicate. Test with repositories that have very short files to surface edge cases in chunking logic.</p>
+      </div>
+
+      <h3>Problem 2: SSE Tokens Breaking on Newlines</h3>
+      <div class="problem-block">
+        <h4>🔴 The Problem</h4>
+        <p>LLM responses for code contain literal newlines (in code blocks, bullet points). The SSE protocol uses <code>\n\n</code> as an event delimiter. When the LLM streamed a token containing <code>\n</code>, the browser's <code>EventSource</code> interpreted it as the end of an event, splitting the token stream into malformed events. Code blocks in the chat appeared garbled.</p>
+      </div>
+      <div class="solution-block">
+        <h4>✅ The Fix</h4>
+        <p>Escape newlines before yielding tokens: <code>token.replace("\n", "\\n")</code> in the Python SSE generator. On the client side, reverse the escape after receiving each token: <code>rawToken.replaceAll("\\n", "\n")</code>. This preserves newline semantics while keeping SSE events well-formed.</p>
+      </div>
+      <div class="learning-block">
+        <h4>💡 What I Learned</h4>
+        <p>Streaming protocols have specific format requirements that must be respected. Always test streaming with edge-case content (code blocks, JSON, markdown tables) not just simple prose. Read the protocol spec — SSE's double-newline delimiter is explicitly documented but easy to miss.</p>
+      </div>
+
+      <h3>Problem 3: GitHub URL Normalization</h3>
+      <div class="problem-block">
+        <h4>🔴 The Problem</h4>
+        <p>Users pasted GitHub URLs in many forms: <code>https://github.com/user/repo</code>, <code>https://github.com/user/repo/tree/main/subfolder</code>, <code>https://github.com/user/repo.git</code>, with or without trailing slashes. The direct <code>Repo.clone_from(url)</code> call failed on web URLs because they're not valid git clone URLs — they need <code>https://github.com/user/repo.git</code>.</p>
+      </div>
+      <div class="solution-block">
+        <h4>✅ The Fix</h4>
+        <p>Added URL normalization with a regex to extract owner/repo from any GitHub URL pattern, strip <code>.git</code> suffixes, reconstruct the canonical clone URL, parse out branch names from <code>/tree/branch-name/</code> paths, and fall back to cloning the default branch if a specific branch clone fails.</p>
+      </div>
+      <div class="learning-block">
+        <h4>💡 What I Learned</h4>
+        <p>User input is always messier than you expect. Design for the happy path first, then enumerate edge cases systematically. For URLs specifically, always normalize before using — strip trailing slashes, handle different schemes (http vs https), and extract structured data with regex rather than string splits.</p>
+      </div>
+
+      <h3>Problem 4: ML Model Memory Across Requests</h3>
+      <div class="problem-block">
+        <h4>🔴 The Problem</h4>
+        <p>The initial implementation loaded <code>SentenceTransformer(model_name)</code> on every embedding request. Loading the 80MB model takes 3-5 seconds and consumes significant RAM. With concurrent requests, multiple model instances were loaded simultaneously, causing memory exhaustion in containers with 512MB RAM limits.</p>
+      </div>
+      <div class="solution-block">
+        <h4>✅ The Fix</h4>
+        <p>Wrapped the model loader with <code>@lru_cache(maxsize=1)</code> — Python's built-in memoization decorator. The first call loads the model; subsequent calls return the cached instance instantly. The <code>maxsize=1</code> ensures only one model is ever in memory. Since <code>lru_cache</code> keys on function arguments, and the function takes no arguments (model name comes from <code>os.getenv</code>), the cache is effectively a singleton.</p>
+      </div>
+      <div class="learning-block">
+        <h4>💡 What I Learned</h4>
+        <p>ML models are heavyweight resources that must be managed with singleton patterns. <code>@lru_cache</code> is elegant for this in Python. In production, model loading should happen at service startup (warm-up), not on the first request — prevents the "cold start" latency spike.</p>
+      </div>
+
+      <h3>Problem 5: Streaming Through the Node Gateway Proxy</h3>
+      <div class="problem-block">
+        <h4>🔴 The Problem</h4>
+        <p>The Node.js gateway proxies the RAG service's SSE stream. Initially using <code>http.get()</code> and collecting the response body into a string before forwarding — this buffered the entire response, destroying the streaming effect. The user saw nothing until the full LLM response was complete.</p>
+      </div>
+      <div class="solution-block">
+        <h4>✅ The Fix</h4>
+        <p>Set the Node proxy to pipe the response stream directly: <code>response.pipe(res)</code> after setting the appropriate SSE headers (<code>Content-Type: text/event-stream</code>, <code>Cache-Control: no-cache</code>, <code>X-Accel-Buffering: no</code>). This passes each SSE chunk byte-for-byte to the client as it arrives from the Python service.</p>
+      </div>
+      <div class="learning-block">
+        <h4>💡 What I Learned</h4>
+        <p>HTTP proxies buffer by default. For streaming endpoints, explicitly disable buffering at every layer: the proxy, the client HTTP library, and even nginx/reverse proxies in production (via <code>X-Accel-Buffering: no</code> header). Think of streaming as a pipeline where any buffer in the middle destroys the streaming property.</p>
+      </div>
+
+      <h3>Problem 6: Docker Networking Between Services</h3>
+      <div class="problem-block">
+        <h4>🔴 The Problem</h4>
+        <p>Connecting to <code>localhost:8101</code> from inside a Docker container refers to the container's own localhost, not the host machine or other containers. The Node gateway was configured with <code>PARSER_URL=http://localhost:8101</code> and couldn't reach the Python parser service running in a different container.</p>
+      </div>
+      <div class="solution-block">
+        <h4>✅ The Fix</h4>
+        <p>Docker Compose creates a default bridge network. Services can reach each other using the service name as a hostname. Changed to <code>PARSER_URL=http://repository-parser:8101</code> where <code>repository-parser</code> is the service name in <code>docker-compose.yml</code>. Docker's DNS resolver translates the service name to the container's IP automatically.</p>
+      </div>
+      <div class="learning-block">
+        <h4>💡 What I Learned</h4>
+        <p>Container networking is a different mental model from host networking. <code>localhost</code> inside a container is that container only. Service-to-service communication in Docker Compose uses service names as DNS hostnames. Always verify inter-service connectivity with a health check ping before integrating business logic.</p>
+      </div>
+    </div>
+
+    <!-- ═══════ WHAT I LEARNED ═══════ -->
+    <div class="section" id="sec-what-i-learned">
+      <div class="section-header">
+        <div class="section-num">REFLECTION</div>
+        <div class="section-title">What I <em>Learned</em></div>
+        <div class="section-desc">The deeper technical and engineering insights gained from building this project end-to-end.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🧠</div>RAG System Design Principles</div>
+        <ul style="color:var(--text2); font-size:13.5px; line-height:1.75; padding-left:1.2rem;">
+          <li>Retrieval quality is more important than generation quality — a great LLM with bad chunks gives bad answers</li>
+          <li>Chunk size is a tradeoff: too small loses context, too large dilutes the semantic signal</li>
+          <li>Prepending metadata (file path, language, symbol name) to chunks significantly improves retrieval precision</li>
+          <li>Always normalize embeddings before storing — enables cosine similarity as dot product (faster ANN)</li>
+          <li>Per-repository collection isolation in ChromaDB enables clean deletion and prevents cross-repo retrieval contamination</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🏗</div>Polyglot Microservices Architecture</div>
+        <ul style="color:var(--text2); font-size:13.5px; line-height:1.75; padding-left:1.2rem;">
+          <li>Using the right language for each service is more important than having one language everywhere</li>
+          <li>A shared common library (mounted via Docker volumes + PYTHONPATH) eliminates code duplication across Python services</li>
+          <li>HTTP is a universal service contract — Node.js can call Python services without any shared types or generated clients</li>
+          <li>Health check endpoints (<code>/health</code>) on every service are essential for Docker Compose readiness probes</li>
+          <li>Service-name-based DNS in Docker Compose is simpler than hardcoded IPs and works across environments</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">⚡</div>Streaming APIs & Real-Time UX</div>
+        <ul style="color:var(--text2); font-size:13.5px; line-height:1.75; padding-left:1.2rem;">
+          <li>SSE is the right choice for LLM token streaming — simpler than WebSockets, works over HTTP/1.1</li>
+          <li>Proxies must explicitly pipe streams, not buffer them — any buffering layer destroys streaming</li>
+          <li>Escape protocol-special characters (newlines in SSE) at the sender and unescape at the receiver</li>
+          <li>Post-stream events (citations, done signals) are elegant for metadata that arrives after content</li>
+          <li>Perceived latency is more important than actual latency — first token in 500ms beats full response in 3s</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🔐</div>Security & Authentication</div>
+        <ul style="color:var(--text2); font-size:13.5px; line-height:1.75; padding-left:1.2rem;">
+          <li>Never store plaintext passwords — bcrypt's adaptive hashing stays secure as CPUs get faster</li>
+          <li>JWT's statelessness makes it perfect for microservices — any service can verify without a central session store</li>
+          <li>Short token expiry + refresh token pattern is the production standard — 7 days is fine for development</li>
+          <li>CORS configuration must be explicit — allowing all origins is a security risk in production</li>
+          <li>All user-owned resources (repos, chats) need ownership checks — never trust client-provided IDs alone</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🛠</div>Developer Experience & Tooling</div>
+        <ul style="color:var(--text2); font-size:13.5px; line-height:1.75; padding-left:1.2rem;">
+          <li>TypeScript's type safety across the full stack catches integration bugs at compile time, not runtime</li>
+          <li>Pydantic models serve as both validation AND documentation for FastAPI endpoints</li>
+          <li>Docker Compose dramatically simplifies multi-service local development — one command starts 8 services</li>
+          <li>Vite's dev proxy eliminates CORS issues during development without changing any production config</li>
+          <li>Mock/offline fallbacks (LLM offline mode, hash embeddings) make the system runnable without any API keys</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══════ DESIGN DECISIONS ═══════ -->
+    <div class="section" id="sec-design-decisions">
+      <div class="section-header">
+        <div class="section-num">ENGINEERING JUDGMENT</div>
+        <div class="section-title">Key Design <em>Decisions</em></div>
+        <div class="section-desc">The intentional architectural choices made and the reasoning behind them — the kind of thing an interviewer will probe.</div>
+      </div>
+
+      <div class="theory-block">
+        <h3>🎯 Decision 1: Node.js as API Gateway, NOT as an All-in-One Server</h3>
+        <p><strong>Why:</strong> Node.js excels at I/O-heavy work (auth, MongoDB, HTTP proxying) but is wrong for CPU-heavy ML operations. Python excels at ML (PyTorch, NumPy, transformers). Splitting into gateway + Python microservices uses each runtime for what it's best at.</p>
+        <p><strong>Alternative considered:</strong> Python FastAPI for everything (no Node). Rejected because JWT+bcrypt+MongoDB tooling is better in the Node/TypeScript ecosystem.</p>
+      </div>
+
+      <div class="theory-block">
+        <h3>🎯 Decision 2: ChromaDB Over PostgreSQL+pgvector</h3>
+        <p><strong>Why:</strong> ChromaDB is purpose-built for vector workloads with no configuration overhead. It handles embedding storage, metadata, and ANN search in a single API. pgvector requires a running PostgreSQL instance, schema migrations, and HNSW index configuration.</p>
+        <p><strong>Tradeoff:</strong> ChromaDB is less battle-tested at scale than pgvector. For production at millions of chunks, pgvector or Pinecone/Weaviate would be more appropriate.</p>
+      </div>
+
+      <div class="theory-block">
+        <h3>🎯 Decision 3: Repository-Scoped Collections in ChromaDB</h3>
+        <p><strong>Why:</strong> Each repository gets its own ChromaDB collection (<code>repo_{id}</code>). This enables clean deletion (delete collection = delete all vectors for that repo), prevents cross-repo retrieval contamination, and allows per-repository vector count queries.</p>
+        <p><strong>Alternative:</strong> One global collection with a <code>repository_id</code> metadata filter. Simpler to manage but filtering is slower and deletion is harder (must query all IDs for that repo first).</p>
+      </div>
+
+      <div class="theory-block">
+        <h3>🎯 Decision 4: Two-Pass Chunking (Symbol + Sliding Window)</h3>
+        <p><strong>Why:</strong> Symbol-level chunks (functions, classes) give the best semantic signal for named code entities. But files have top-level code, configs, and statements outside any symbol — the sliding window ensures 100% file coverage.</p>
+        <p><strong>Tradeoff:</strong> Creates overlapping chunks between passes, requiring deduplication. The dedup cost is acceptable given the retrieval quality improvement from symbol-aware chunks.</p>
+      </div>
+
+      <div class="theory-block">
+        <h3>🎯 Decision 5: Offline Fallback Mode</h3>
+        <p><strong>Why:</strong> Requiring API keys to run any part of the system makes development friction unbearable. The mock LLM mode (returns context verbatim) and hash embedding fallback allow the entire pipeline to run offline — useful for testing the parsing, chunking, and retrieval stages without any external dependencies.</p>
+        <p><strong>Learning:</strong> Make systems runnable locally with zero external dependencies for development. Reserve production credentials for staging/production environments.</p>
+      </div>
+    </div>
+
+    <!-- ═══════ FUTURE IMPROVEMENTS ═══════ -->
+    <div class="section" id="sec-future-improvements">
+      <div class="section-header">
+        <div class="section-num">ROADMAP THINKING</div>
+        <div class="section-title">Future <em>Improvements</em></div>
+        <div class="section-desc">What would make this system better — shows forward-thinking and understanding of production engineering challenges.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🚀</div>Retrieval Quality Improvements</div>
+        <ul style="color:var(--text2); font-size:13.5px; line-height:1.75; padding-left:1.2rem;">
+          <li><strong>Hybrid search:</strong> Combine vector search (semantic) with BM25 (keyword) using Reciprocal Rank Fusion for better recall</li>
+          <li><strong>Re-ranking:</strong> Add a cross-encoder re-ranker (e.g., ms-marco-MiniLM) to re-score the top-20 results and select the best 8</li>
+          <li><strong>Tree-sitter parsers:</strong> Replace regex-based JS/TS/C++ parsing with tree-sitter for accurate ASTs in all languages</li>
+          <li><strong>Parent document retrieval:</strong> Return parent chunks (larger context) when child chunks match — preserves function context</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">⚙</div>Production Architecture</div>
+        <ul style="color:var(--text2); font-size:13.5px; line-height:1.75; padding-left:1.2rem;">
+          <li><strong>Async queue:</strong> Move parsing/embedding to a background job queue (Celery + Redis or BullMQ) — remove blocking from the HTTP request cycle</li>
+          <li><strong>WebSocket progress:</strong> Push real-time status updates instead of client polling for repository processing status</li>
+          <li><strong>Rate limiting:</strong> Add request rate limiting per user to prevent abuse of LLM API budget</li>
+          <li><strong>Caching:</strong> Cache frequent query embeddings (Redis) — same query on the same repo should skip re-embedding</li>
+          <li><strong>Token counting:</strong> Track LLM token usage per user/repo for billing and quota management</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="card-icon">🔐</div>Security Hardening</div>
+        <ul style="color:var(--text2); font-size:13.5px; line-height:1.75; padding-left:1.2rem;">
+          <li><strong>Refresh tokens:</strong> Implement short-lived access tokens (15min) + long-lived refresh tokens instead of 7-day JWTs</li>
+          <li><strong>File upload validation:</strong> Scan ZIP archives for zip bombs and path traversal attacks before extraction</li>
+          <li><strong>Secret management:</strong> Replace .env files with HashiCorp Vault or AWS Secrets Manager in production</li>
+          <li><strong>Input sanitization:</strong> Sanitize repository names and chat messages before storing in MongoDB</li>
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+const SECTIONS = [
+  'what-is-rag','embeddings-theory','microservices-theory','streaming-sse',
+  'jwt-auth','mongodb-vs-chroma','code-chunking','ast-parsing',
+  'llm-providers','prompt-engineering','sentence-transformers',
+  'problems-faced','what-i-learned','design-decisions','future-improvements'
+];
+let currentIndex = 0;
+
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById('sec-' + id);
+  if (sec) sec.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') === `show('${id}')`) n.classList.add('active');
+  });
+  currentIndex = SECTIONS.indexOf(id);
+  const titles = {
+    'what-is-rag': 'What is RAG?',
+    'embeddings-theory': 'Embeddings & Vector Space',
+    'microservices-theory': 'Microservices Architecture',
+    'streaming-sse': 'Streaming & SSE',
+    'jwt-auth': 'JWT Authentication',
+    'mongodb-vs-chroma': 'MongoDB vs ChromaDB',
+    'code-chunking': 'Code Chunking Strategy',
+    'ast-parsing': 'AST Parsing Theory',
+    'llm-providers': 'LLM Providers Compared',
+    'prompt-engineering': 'Prompt Engineering',
+    'sentence-transformers': 'Sentence Transformers',
+    'problems-faced': 'Problems I Faced',
+    'what-i-learned': 'What I Learned',
+    'design-decisions': 'Key Design Decisions',
+    'future-improvements': 'Future Improvements'
+  };
+  document.getElementById('crumb-title').textContent = titles[id] || id;
+  window.scrollTo(0, 0);
+}
+
+function nextSection() {
+  if (currentIndex < SECTIONS.length - 1) show(SECTIONS[currentIndex + 1]);
+}
+
+function prevSection() {
+  if (currentIndex > 0) show(SECTIONS[currentIndex - 1]);
+}
+
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText);
+  btn.textContent = 'copied!';
+  setTimeout(() => btn.textContent = 'copy', 1500);
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextSection();
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevSection();
+});
+</script>
+</body>
+</html>

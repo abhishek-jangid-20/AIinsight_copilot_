@@ -1,0 +1,132 @@
+name: aiinsight-copilot
+
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  chromadb:
+    image: chromadb/chroma:0.5.23
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  repository-parser-service:
+    build:
+      context: ./services
+      dockerfile: repository-parser-service/Dockerfile
+    ports:
+      - "8101:8101"
+    volumes:
+      - service_data:/data
+
+  embedding-service:
+    build:
+      context: ./services
+      dockerfile: embedding-service/Dockerfile
+    environment:
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+    depends_on:
+      - chromadb
+    ports:
+      - "8102:8102"
+    volumes:
+      - service_data:/data
+
+  rag-service:
+    build:
+      context: ./services
+      dockerfile: rag-service/Dockerfile
+    environment:
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.1-70b-versatile}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-pro}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-anthropic/claude-3.5-sonnet}
+    depends_on:
+      - chromadb
+      - embedding-service
+    ports:
+      - "8103:8103"
+
+  documentation-service:
+    build:
+      context: ./services
+      dockerfile: documentation-service/Dockerfile
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.1-70b-versatile}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-pro}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-anthropic/claude-3.5-sonnet}
+    ports:
+      - "8104:8104"
+
+  analysis-service:
+    build:
+      context: ./services
+      dockerfile: analysis-service/Dockerfile
+    ports:
+      - "8105:8105"
+
+  minigpt-service:
+    build:
+      context: ./services
+      dockerfile: minigpt-service/Dockerfile
+    ports:
+      - "8106:8106"
+
+  server:
+    build: ./server
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-8080}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:5173}
+      JWT_SECRET: ${JWT_SECRET:-development-secret-change-me}
+      MONGODB_URI: mongodb://mongo:27017/codeinsight
+      PARSER_SERVICE_URL: http://repository-parser-service:8101
+      EMBEDDING_SERVICE_URL: http://embedding-service:8102
+      RAG_SERVICE_URL: http://rag-service:8103
+      DOCUMENTATION_SERVICE_URL: http://documentation-service:8104
+      ANALYSIS_SERVICE_URL: http://analysis-service:8105
+      MINIGPT_SERVICE_URL: http://minigpt-service:8106
+    depends_on:
+      - mongo
+      - repository-parser-service
+      - embedding-service
+      - rag-service
+      - documentation-service
+      - analysis-service
+      - minigpt-service
+    ports:
+      - "8080:8080"
+    volumes:
+      - gateway_uploads:/app/uploads
+
+  client:
+    build: ./client
+    environment:
+      - VITE_PROXY_TARGET=http://server:8080
+    depends_on:
+      - server
+    ports:
+      - "5173:5173"
+
+volumes:
+  mongo_data:
+  chroma_data:
+  service_data:
+  gateway_uploads:
