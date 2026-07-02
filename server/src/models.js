@@ -1,14 +1,6 @@
 import mongoose, { Schema } from "mongoose";
-type RepositoryStatus = "queued" | "parsing" | "embedding" | "ready" | "failed";
 
-export interface UserDocument extends mongoose.Document {
-  email: string;
-  name: string;
-  passwordHash: string;
-  createdAt: Date;
-}
-
-const userSchema = new Schema<UserDocument>(
+const userSchema = new Schema(
   {
     email: { type: String, required: true, unique: true, lowercase: true, index: true },
     name: { type: String, required: true },
@@ -17,21 +9,9 @@ const userSchema = new Schema<UserDocument>(
   { timestamps: true }
 );
 
-export const User = mongoose.model<UserDocument>("User", userSchema);
+export const User = mongoose.model("User", userSchema);
 
-export interface RepositoryDocument extends mongoose.Document {
-  ownerId: mongoose.Types.ObjectId;
-  name: string;
-  sourceType: "github" | "zip";
-  sourceUrl?: string;
-  status: RepositoryStatus;
-  lastError?: string;
-  analysis?: unknown;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const repositorySchema = new Schema<RepositoryDocument>(
+const repositorySchema = new Schema(
   {
     ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true },
@@ -44,7 +24,7 @@ const repositorySchema = new Schema<RepositoryDocument>(
   { timestamps: true }
 );
 
-export const Repository = mongoose.model<RepositoryDocument>("Repository", repositorySchema);
+export const Repository = mongoose.model("Repository", repositorySchema);
 
 const chatMessageSchema = new Schema(
   {

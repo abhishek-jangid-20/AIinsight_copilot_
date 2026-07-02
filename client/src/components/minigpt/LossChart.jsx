@@ -1,16 +1,6 @@
 import React from "react";
 
-interface LossPoint {
-  step: number;
-  trainLoss: number;
-  valLoss?: number;
-}
-
-interface LossChartProps {
-  history: LossPoint[];
-}
-
-export function LossChart({ history }: LossChartProps) {
+export function LossChart({ history }) {
   if (history.length === 0) {
     return (
       <div className="flex h-48 w-full flex-col items-center justify-center rounded-lg border border-line bg-ink/40 p-4 text-center">
@@ -34,12 +24,12 @@ export function LossChart({ history }: LossChartProps) {
   const maxLoss = Math.max(...trainLosses, ...valLosses, 1.0) * 1.1; // at least 1.0, pad 10%
   const minLoss = 0.0;
 
-  const getX = (step: number) => {
+  const getX = (step) => {
     if (maxStep === minStep) return padding;
     return padding + ((step - minStep) / (maxStep - minStep)) * (width - 2 * padding);
   };
 
-  const getY = (loss: number) => {
+  const getY = (loss) => {
     return height - padding - (loss / maxLoss) * (height - 2 * padding);
   };
 
@@ -47,7 +37,7 @@ export function LossChart({ history }: LossChartProps) {
   const trainPoints = history.map((pt) => `${getX(pt.step)},${getY(pt.trainLoss)}`).join(" ");
   const valPoints = history
     .filter((pt) => pt.valLoss !== undefined)
-    .map((pt) => `${getX(pt.step)},${getY(pt.valLoss!)}`)
+    .map((pt) => `${getX(pt.step)},${getY(pt.valLoss)}`)
     .join(" ");
 
   // Grid ticks

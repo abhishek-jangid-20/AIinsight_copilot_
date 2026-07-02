@@ -1,18 +1,11 @@
-import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 
-export interface JwtUser {
-  id: string;
-  email: string;
-  name: string;
-}
-
-export function signToken(user: JwtUser) {
+export function signToken(user) {
   return jwt.sign(user, env.JWT_SECRET, { expiresIn: "7d" });
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export function requireAuth(req, res, next) {
   const header = req.header("authorization");
   const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 
@@ -21,7 +14,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    req.user = jwt.verify(token, env.JWT_SECRET) as JwtUser;
+    req.user = jwt.verify(token, env.JWT_SECRET);
     return next();
   } catch {
     return res.status(401).json({ message: "Invalid or expired token" });

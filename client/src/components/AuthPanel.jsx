@@ -9,7 +9,7 @@ import { signedIn } from "../app/store";
 
 export function AuthPanel() {
   const dispatch = useDispatch();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -96,7 +96,7 @@ export function AuthPanel() {
           {/* Tab switcher */}
           <div className="mb-6 grid grid-cols-2 gap-1 p-1 rounded-xl"
             style={{ background: "rgba(6,10,18,0.7)", border: "1px solid rgba(29,42,66,0.6)" }}>
-            {(["login", "signup"] as const).map((item) => (
+            {["login", "signup"].map((item) => (
               <button
                 type="button"
                 key={item}
@@ -134,8 +134,8 @@ export function AuthPanel() {
                   onClick={() => setShowPw(!showPw)}
                   className="transition"
                   style={{ color: "#334155", lineHeight: 1 }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#43d9ff"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#334155"; }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "#43d9ff"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = "#334155"; }}
                 >
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -147,7 +147,7 @@ export function AuthPanel() {
           {mutation.error && (
             <div className="mt-4 px-3 py-2.5 rounded-xl text-xs"
               style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.22)", color: "#f87171" }}>
-              {(mutation.error as Error).message}
+              {mutation.error.message}
             </div>
           )}
 
@@ -196,13 +196,6 @@ function Field({
   type = "text",
   placeholder,
   suffix,
-}: {
-  label: string;
-  value: string;
-  type?: string;
-  placeholder?: string;
-  onChange: (value: string) => void;
-  suffix?: React.ReactNode;
 }) {
   return (
     <label className="mb-3 block">

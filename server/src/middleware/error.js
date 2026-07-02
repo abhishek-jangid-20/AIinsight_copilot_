@@ -1,17 +1,17 @@
-import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 
 export class HttpError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(status, message) {
     super(message);
+    this.status = status;
   }
 }
 
-export function notFound(req: Request, res: Response) {
+export function notFound(req, res) {
   res.status(404).json({ message: `No route for ${req.method} ${req.path}` });
 }
 
-export function errorHandler(error: unknown, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(error, _req, res, _next) {
   if (error instanceof ZodError) {
     return res.status(400).json({ message: "Invalid request", issues: error.issues });
   }

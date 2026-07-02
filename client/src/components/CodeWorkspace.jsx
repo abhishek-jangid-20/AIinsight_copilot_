@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import Editor, { type Monaco } from "@monaco-editor/react";
-import type { editor } from "monaco-editor";
+import Editor from "@monaco-editor/react";
 import {
   FileCode2, ChevronLeft, ChevronRight,
   Folder, AlertTriangle, Loader2, FileText,
   Info, X
 } from "lucide-react";
 import { explainFile } from "../lib/api";
-import type { Repository, SourceFile } from "../types";
 import { NAVIGATE_TO_FILE_EVENT } from "./SearchPanel";
 
-const LANG_COLOR: Record<string, string> = {
+const LANG_COLOR = {
   TypeScript: "#43d9ff",
   JavaScript: "#f7c45f",
   Python:     "#62f5c6",
@@ -20,24 +18,21 @@ const LANG_COLOR: Record<string, string> = {
 };
 
 // LOGIC-008: Persistent per-repository file selection
-const repoFileMemory = new Map<string, string>();
+const repoFileMemory = new Map();
 
-export function CodeWorkspace({ repository }: { repository: Repository }) {
+export function CodeWorkspace({ repository }) {
   const files = repository.analysis?.files ?? [];
 
   // LOGIC-008: Restore last selected file for this repository
-  const [selectedPath, setSelectedPath] = useState<string | null>(
+  const [selectedPath, setSelectedPath] = useState(
     () => repoFileMemory.get(repository._id) ?? null
   );
   const [showFiles, setShowFiles] = useState(true);
   const [filter, setFilter] = useState("");
   // ENH-005: Target line to scroll/highlight in Monaco
-  const [targetLine, setTargetLine] = useState<number | null>(null);
+  const [targetLine, setTargetLine] = useState(null);
   // ENH-012: Explain panel state
-  const [explainPanel, setExplainPanel] = useState<{
-    purpose: string;
-    symbols: Array<{ name: string; kind: string; startLine: number; endLine: number }>;
-  } | null>(null);
+  const [explainPanel, setExplainPanel] = useState(null);
   const [isExplaining, setIsExplaining] = useState(false);
 
   // Sync selection memory when selectedPath changes
@@ -54,8 +49,8 @@ export function CodeWorkspace({ repository }: { repository: Repository }) {
 
   // ENH-004/005: Listen for navigate-to-file events from SearchPanel
   useEffect(() => {
-    const handler = (e: Event) => {
-      const { filePath, line } = (e as CustomEvent<{ filePath: string; line: number }>).detail;
+    const handler = (e) => {
+      const { filePath, line } = e.detail;
       setSelectedPath(filePath);
       repoFileMemory.set(repository._id, filePath);
       setTargetLine(line);
@@ -78,12 +73,12 @@ export function CodeWorkspace({ repository }: { repository: Repository }) {
 
   // Group by top-level directory
   const grouped = useMemo(() => {
-    const groups = new Map<string, SourceFile[]>();
+    const groups = new Map();
     for (const file of filtered) {
       const parts = file.path.split("/");
       const dir = parts.length > 1 ? parts[0] : "";
       if (!groups.has(dir)) groups.set(dir, []);
-      groups.get(dir)!.push(file);
+      groups.get(dir).push(file);
     }
     return groups;
   }, [filtered]);
@@ -209,14 +204,14 @@ export function CodeWorkspace({ repository }: { repository: Repository }) {
                     }}
                     onMouseEnter={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLButtonElement).style.background = "rgba(17,24,41,0.5)";
-                        (e.currentTarget as HTMLButtonElement).style.color = "#94a3b8";
+                        e.currentTarget.style.background = "rgba(17,24,41,0.5)";
+                        e.currentTarget.style.color = "#94a3b8";
                       }
                     }}
                     onMouseLeave={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLButtonElement).style.background = "";
-                        (e.currentTarget as HTMLButtonElement).style.color = "#64748b";
+                        e.currentTarget.style.background = "";
+                        e.currentTarget.style.color = "#64748b";
                       }
                     }}
                   >
@@ -302,20 +297,12 @@ function SourceViewer({
   onTargetLineConsumed,
   onExplain,
   isExplaining,
-}: {
-  file: SourceFile;
-  showFiles: boolean;
-  setShowFiles: (v: boolean) => void;
-  targetLine: number | null;
-  onTargetLineConsumed: () => void;
-  onExplain: () => void;
-  isExplaining: boolean;
 }) {
   const filename = file.path.split("/").pop() ?? file.path;
   // LOGIC-009: Use file.language for color, not raw extension
   const langColor = LANG_COLOR[file.language] ?? "#64748b";
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const monacoRef = useRef<Monaco | null>(null);
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
 
   // ENH-005: When targetLine changes, scroll Monaco to the target line and add a highlight decoration
   useEffect(() => {
@@ -354,8 +341,8 @@ function SourceViewer({
           onClick={() => setShowFiles(!showFiles)}
           className="p-1 rounded-md transition shrink-0"
           style={{ color: "#334155" }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(29,42,66,0.5)"; (e.currentTarget as HTMLButtonElement).style.color = "#94a3b8"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ""; (e.currentTarget as HTMLButtonElement).style.color = "#334155"; }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(29,42,66,0.5)"; e.currentTarget.style.color = "#94a3b8"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "#334155"; }}
           title={showFiles ? "Hide file tree" : "Show file tree"}
         >
           {showFiles ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
@@ -432,8 +419,8 @@ function SourceViewer({
   );
 }
 
-function languageId(language: string) {
-  const map: Record<string, string> = {
+function languageId(language) {
+  const map = {
     JavaScript: "javascript",
     TypeScript: "typescript",
     Python: "python",

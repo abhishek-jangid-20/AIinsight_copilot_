@@ -2,51 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { Play, Pause, FastForward, RotateCcw, Cpu, Sparkles, BookOpen, GraduationCap } from "lucide-react";
 import { api } from "../lib/api";
 import { LossChart } from "./minigpt/LossChart";
-import { AttentionMap } from "./minigpt/AttentionMap";
-
-interface InitResponse {
-  initialized: boolean;
-  vocabSize: number;
-  chars: string[];
-  corpusLength: number;
-  hyperparameters: {
-    n_layer: number;
-    n_head: number;
-    n_embd: number;
-    block_size: number;
-  };
-}
-
-interface TrainResponse {
-  step: number;
-  trainLoss: number;
-  valLoss: number;
-  gradNorm?: number;
-  lossHistory: Array<{ step: number; trainLoss: number; valLoss: number }>;
-}
-
-interface GenerateResponse {
-  seed: string;
-  generatedText: string;
-  fullText: string;
-  tokens: number[];
-  tokenLabels: string[];
-  attentionMaps: number[][][][];
-}
-
-interface StateResponse {
-  initialized: boolean;
-  vocabSize?: number;
-  corpusLength?: number;
-  step?: number;
-  lossHistory?: Array<{ step: number; trainLoss: number; valLoss: number }>;
-  hyperparameters?: {
-    n_layer: number;
-    n_head: number;
-    n_embd: number;
-    block_size: number;
-  };
-}
 
 export function MiniGPTLab() {
   // Model Initialization Configuration
@@ -67,8 +22,8 @@ export function MiniGPTLab() {
   const [isTraining, setIsTraining] = useState(false);
   const [stepsPerClick, setStepsPerClick] = useState(10);
   const [currentStep, setCurrentStep] = useState(0);
-  const [gradNorm, setGradNorm] = useState<number | null>(null);
-  const [lossHistory, setLossHistory] = useState<Array<{ step: number; trainLoss: number; valLoss: number }>>([]);
+  const [gradNorm, setGradNorm] = useState(null);
+  const [lossHistory, setLossHistory] = useState([]);
   
   // Text Generator Configuration & Status
   const [seedText, setSeedText] = useState("A");
@@ -77,18 +32,18 @@ export function MiniGPTLab() {
   const [topK, setTopK] = useState(10);
   const [generatedText, setGeneratedText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [attentionMaps, setAttentionMaps] = useState<number[][][][]>([]);
-  const [tokenLabels, setTokenLabels] = useState<string[]>([]);
+  const [attentionMaps, setAttentionMaps] = useState([]);
+  const [tokenLabels, setTokenLabels] = useState([]);
   const [isLoadingWikitext, setIsLoadingWikitext] = useState(false);
   
   // Background loop interval reference
-  const trainingIntervalRef = useRef<number | null>(null);
+  const trainingIntervalRef = useRef(null);
 
   // Sync state on load
   useEffect(() => {
     async function fetchState() {
       try {
-        const state = await api<StateResponse>("/api/minigpt/state");
+        const state = await api("/api/minigpt/state");
         if (state.initialized && state.hyperparameters) {
           setInitialized(true);
           setVocabSize(state.vocabSize ?? 0);
@@ -116,7 +71,7 @@ export function MiniGPTLab() {
   const handleInitialize = async () => {
     setIsInitializing(true);
     try {
-      const res = await api<InitResponse>("/api/minigpt/init", {
+      const res = await api("/api/minigpt/init", {
         method: "POST",
         body: JSON.stringify({
           text: corpusText.trim() || undefined,
@@ -134,7 +89,7 @@ export function MiniGPTLab() {
       setGeneratedText("");
       setAttentionMaps([]);
       setTokenLabels([]);
-    } catch (err: any) {
+    } catch (err) {
       alert(`Initialization failed: ${err.message}`);
     } finally {
       setIsInitializing(false);
@@ -154,9 +109,9 @@ export function MiniGPTLab() {
   isTrainingRef.current = isTraining;
 
   // Perform training step(s)
-  const handleTrainStep = async (stepsOverride?: number) => {
+  const handleTrainStep = async (stepsOverride) => {
     try {
-      const res = await api<TrainResponse>("/api/minigpt/train-step", {
+      const res = await api("/api/minigpt/train-step", {
         method: "POST",
         body: JSON.stringify({
           lr: lrRef.current,
@@ -170,7 +125,7 @@ export function MiniGPTLab() {
       if (res.gradNorm != null) {
         setGradNorm(res.gradNorm);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Training step error:", err);
       setIsTraining(false);
       isTrainingRef.current = false;
@@ -179,7 +134,7 @@ export function MiniGPTLab() {
 
   // Manage recursive timeout loop for continuous training
   useEffect(() => {
-    let timeoutId: number | null = null;
+    let timeoutId = null;
 
     const runLoop = async () => {
       if (!isTrainingRef.current) return;
@@ -212,7 +167,7 @@ export function MiniGPTLab() {
   const handleGenerateText = async () => {
     setIsGenerating(true);
     try {
-      const res = await api<GenerateResponse>("/api/minigpt/generate", {
+      const res = await api("/api/minigpt/generate", {
         method: "POST",
         body: JSON.stringify({
           seed: seedText,
@@ -225,7 +180,7 @@ export function MiniGPTLab() {
       setGeneratedText(res.generatedText);
       setAttentionMaps(res.attentionMaps);
       setTokenLabels(res.tokenLabels);
-    } catch (err: any) {
+    } catch (err) {
       alert(`Generation failed: ${err.message}`);
     } finally {
       setIsGenerating(false);
@@ -293,82 +248,6 @@ Asset allocation is the strategic distribution of your investment capital across
 
 The major asset classes include stocks, bonds, real estate, commodities, and cash equivalents. Each asset class has distinct risk and return characteristics, and they often move in different directions in response to economic conditions.
 
-STOCKS AND EQUITIES
-
-Stocks, also called equities, represent ownership shares in publicly traded companies. When you buy stock in a company, you become a partial owner and are entitled to a proportional share of the company's profits, typically distributed as dividends, and any increase in the company's value over time.
-
-Historically, stocks have provided the highest long-term returns of any major asset class. Over the past century, the United States stock market has returned approximately ten percent per year on average, including dividend reinvestment. However, these returns come with substantial short-term volatility. In any given year, the stock market might rise by thirty percent or fall by forty percent. Investors who cannot tolerate this volatility often make the catastrophic mistake of selling during downturns, locking in their losses at precisely the wrong moment.
-
-Stocks can be categorized in several ways. Growth stocks are shares in companies expected to grow their revenues and earnings faster than the overall market. Value stocks are shares in companies that appear undervalued relative to their fundamental financial metrics. Dividend stocks are shares in companies that pay regular cash distributions to shareholders. International stocks provide exposure to companies outside your home country, adding geographic diversification.
-
-BONDS AND FIXED INCOME
-
-Bonds are debt securities issued by governments and corporations to raise capital. When you buy a bond, you are lending money to the issuer in exchange for regular interest payments, called coupon payments, and the return of your principal at maturity.
-
-Government bonds, especially those issued by stable governments like the United States Treasury, are considered among the safest investments in the world. They offer lower returns than stocks but provide stability and capital preservation. Corporate bonds offer higher yields than government bonds to compensate investors for the additional risk that the corporation might default on its payments.
-
-Bonds serve a crucial role in portfolio management. Because bond prices typically move in the opposite direction of stock prices during market stress, holding bonds alongside stocks reduces the overall volatility of a portfolio. This negative correlation makes bonds an effective hedge against stock market downturns.
-
-REAL ESTATE
-
-Real estate is one of the oldest and most effective wealth-building vehicles in human history. Investing in property provides two potential sources of return: rental income and capital appreciation. When managed well, real estate can provide steady cash flow that covers mortgage payments and generates surplus income, while the property simultaneously appreciates in value over time.
-
-Real estate also provides a hedge against inflation, because property values and rents tend to rise along with the general price level. However, real estate is illiquid compared to stocks and bonds, requires significant capital to purchase, and demands ongoing management and maintenance.
-
-CHAPTER FOUR: DIVERSIFICATION AND PORTFOLIO CONSTRUCTION
-
-Diversification is the practice of spreading investments across a variety of assets, sectors, industries, and geographic regions to reduce risk. The fundamental principle of diversification is that assets that perform differently under the same economic conditions can offset each other's losses, reducing the overall volatility of a portfolio.
-
-Harry Markowitz, who won the Nobel Prize in Economics for his work on portfolio theory, demonstrated mathematically that a diversified portfolio can achieve a higher return per unit of risk than any individual asset held in isolation. His key insight was that what matters is not just the risk and return of individual assets, but how they correlate with each other.
-
-When building a diversified portfolio, investors should consider diversification across asset classes, within asset classes, across geographies, and across time through dollar-cost averaging.
-
-Dollar-cost averaging is the practice of investing a fixed amount of money at regular intervals, regardless of market conditions. By investing consistently over time, you automatically buy more shares when prices are low and fewer shares when prices are high. Over time, this results in a lower average cost per share than you would achieve by trying to time the market.
-
-CHAPTER FIVE: UNDERSTANDING MARKET CYCLES AND ECONOMIC INDICATORS
-
-Financial markets do not move in a straight line. They move in cycles, driven by the ebb and flow of economic activity, corporate profitability, interest rates, and investor sentiment.
-
-Bull markets are extended periods of rising asset prices, typically defined as an increase of twenty percent or more from a recent low. Bull markets are characterized by economic expansion, rising corporate earnings, low unemployment, and optimistic investor sentiment. They can last for years or even decades.
-
-Bear markets are extended periods of falling asset prices, typically defined as a decline of twenty percent or more from a recent high. Bear markets are often accompanied by economic recessions, rising unemployment, and widespread pessimism. They tend to be shorter than bull markets but more intense, with sharp declines that can damage investor confidence.
-
-Corrective phases are shorter-term pullbacks within larger bull markets, typically defined as declines of ten to twenty percent. Corrections are normal and healthy occurrences that prevent markets from becoming dangerously overvalued.
-
-Key economic indicators help investors understand where the economy is in its cycle and anticipate future market movements. Gross domestic product measures the total economic output of a country and is the primary indicator of economic health. The unemployment rate measures the percentage of the labor force actively seeking but unable to find work. Consumer price inflation measures the rate at which the general price level is rising. Interest rates, set by central banks, influence the cost of borrowing, the attractiveness of different asset classes, and the pace of economic growth.
-
-CHAPTER SIX: THE PSYCHOLOGY OF INVESTING AND BEHAVIORAL FINANCE
-
-Financial markets are not purely rational systems governed by cold calculations of risk and return. They are human systems, driven by fear, greed, hope, and panic. Understanding the psychological forces that drive market behavior is as important as understanding the fundamentals of valuation.
-
-Behavioral finance is the field of study that combines psychology and economics to explain why investors often make irrational decisions that are contrary to their own financial interests.
-
-Loss aversion is one of the most powerful and well-documented behavioral biases in finance. Research by psychologists Daniel Kahneman and Amos Tversky demonstrated that losses feel approximately twice as painful as equivalent gains feel pleasurable. This asymmetry causes investors to hold onto losing investments longer than they should, hoping to avoid the pain of realizing a loss, while selling winning investments too quickly to lock in gains.
-
-Confirmation bias is the tendency to seek out and favor information that confirms our existing beliefs while ignoring or dismissing information that contradicts them. Investors suffering from confirmation bias might read only news sources that support their bullish or bearish views, making them blind to important contrary evidence.
-
-Herd behavior occurs when investors follow the crowd rather than making independent decisions based on fundamentals. During market bubbles, herd behavior causes prices to rise far above their intrinsic value as everyone rushes to buy what everyone else is buying. During panics, it causes prices to fall far below fair value as everyone rushes to sell.
-
-CHAPTER SEVEN: TAX-ADVANTAGED ACCOUNTS AND RETIREMENT PLANNING
-
-One of the most powerful tools available to individual investors is the ability to invest in tax-advantaged accounts. These accounts allow your investments to grow either tax-deferred or tax-free, dramatically increasing your long-term wealth accumulation.
-
-A traditional retirement account allows you to contribute pre-tax income, reducing your taxable income in the year of contribution. Your investments then grow tax-deferred, meaning you pay no taxes on dividends, interest, or capital gains until you withdraw the money in retirement. This allows your money to compound more efficiently because you are not paying annual taxes that would reduce the amount available to reinvest.
-
-A Roth retirement account is funded with after-tax income. You receive no immediate tax deduction, but your investments grow completely tax-free. When you withdraw money in retirement, you owe no taxes, even on the decades of accumulated gains. The Roth account is particularly valuable for young investors who expect to be in a higher tax bracket in retirement than they are today.
-
-An employer-sponsored workplace retirement plan is often one of the most powerful wealth-building tools available to employees. Many employers offer matching contributions, effectively providing a guaranteed return on your investment equal to the match percentage before your money has even been invested.
-
-CHAPTER EIGHT: THE PATH TO FINANCIAL INDEPENDENCE AND EARLY RETIREMENT
-
-Financial independence is the point at which your investment portfolio generates enough passive income to cover all your living expenses indefinitely, without requiring you to work for money. It represents the ultimate goal of personal finance: the freedom to choose how you spend your time.
-
-The financial independence movement, often abbreviated as FIRE for Financial Independence, Retire Early, has gained enormous popularity in recent decades. Its core insight is simple but powerful: by dramatically increasing your savings rate and investing the surplus in low-cost index funds, you can achieve financial independence far earlier than traditional retirement planning suggests.
-
-The standard financial planning wisdom suggests saving fifteen percent of your income and retiring at age sixty-five. The FIRE movement challenges this assumption. By saving forty, fifty, or even seventy percent of your income, you can compress decades of wealth accumulation into a decade or less.
-
-The key metric in FIRE planning is the savings rate. The higher your savings rate, the faster you accumulate wealth and the sooner you achieve financial independence. A savings rate of fifty percent means you are living on half your income and investing the other half. At a market return of seven percent, this allows you to reach financial independence in approximately seventeen years, regardless of your income level.
-
 True financial freedom is not about becoming fabulously wealthy. It is about having enough investment assets to generate reliable passive income that covers your needs and wants. By understanding the principles of compounding, diversification, tax-advantaged investing, and behavioral discipline, anyone can build lasting financial security and achieve the freedom to live life on their own terms.`;
     setCorpusText(text);
     // Auto-set smart hyperparameters for this corpus size
@@ -379,11 +258,11 @@ True financial freedom is not about becoming fabulously wealthy. It is about hav
   const loadWikitextCorpus = async () => {
     setIsLoadingWikitext(true);
     try {
-      const res = await api<{ text: string }>("/api/minigpt/wikitext");
+      const res = await api("/api/minigpt/wikitext");
       setCorpusText(res.text);
       // WikiText is large — use bigger model for better quality (needs 1000+ steps)
       setNLayer(2); setNHead(4); setNEmbd(128); setBlockSize(64);
-    } catch (err: any) {
+    } catch (err) {
       alert(`Failed to load wikitext: ${err.message}`);
     } finally {
       setIsLoadingWikitext(false);
@@ -391,7 +270,7 @@ True financial freedom is not about becoming fabulously wealthy. It is about hav
   };
 
   return (
-    <div className="grid h-full grid-cols-1 lg:grid-cols-[380px_1fr_400px] overflow-hidden min-h-0 bg-ink">
+    <div className="grid h-full grid-cols-1 lg:grid-cols-[380px_1fr] overflow-hidden min-h-0 bg-ink">
       
       {/* LEFT COLUMN: Data Prep & Architecture Config */}
       <aside className="border-r border-line bg-panel/30 p-5 overflow-y-auto flex flex-col gap-6">
@@ -713,11 +592,6 @@ True financial freedom is not about becoming fabulously wealthy. It is about hav
           )}
         </section>
       </main>
-
-      {/* RIGHT COLUMN: Interactive Heatmaps weights */}
-      <aside className="border-l border-line bg-panel/30 p-5 overflow-y-auto">
-        <AttentionMap attentionMaps={attentionMaps} tokenLabels={tokenLabels} />
-      </aside>
 
     </div>
   );

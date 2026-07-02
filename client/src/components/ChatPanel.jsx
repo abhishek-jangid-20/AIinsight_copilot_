@@ -4,31 +4,19 @@ import {
   Loader2, AlertCircle, Sparkles, History, Plus
 } from "lucide-react";
 import { listChats, streamChat } from "../lib/api";
-import type { Repository } from "../types";
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
-
-interface ChatPanelProps {
-  repository: Repository;
-  isCollapsed: boolean;
-  onToggle: () => void;
-}
-
-export function ChatPanel({ repository, isCollapsed, onToggle }: ChatPanelProps) {
+export function ChatPanel({ repository, isCollapsed, onToggle }) {
   const [message, setMessage] = useState("Explain the repository architecture and key data flow.");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [chatId, setChatId] = useState<string | null>(null);
+  const [error, setError] = useState(null);
+  const [chatId, setChatId] = useState(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef(null);
+  const inputRef = useRef(null);
   // FIX-014: Track whether we've already loaded history for the current repo
   // so a status-change re-render doesn't wipe the conversation.
-  const historyLoadedRef = useRef<string | null>(null);
+  const historyLoadedRef = useRef(null);
 
   // FIX-014: Reset conversation state ONLY when the active repository changes,
   // not on every status poll cycle. History is loaded in a separate effect.
@@ -55,7 +43,7 @@ export function ChatPanel({ repository, isCollapsed, onToggle }: ChatPanelProps)
           setMessages(
             last.messages
               .filter((m) => m.role === "user" || m.role === "assistant")
-              .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }))
+              .map((m) => ({ role: m.role, content: m.content }))
           );
         }
       })
@@ -125,8 +113,8 @@ export function ChatPanel({ repository, isCollapsed, onToggle }: ChatPanelProps)
         className="flex h-10 shrink-0 items-center justify-between px-4 cursor-pointer transition select-none"
         style={{ borderBottom: "1px solid rgba(29,42,66,0.6)" }}
         onClick={onToggle}
-        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "rgba(29,42,66,0.2)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = ""; }}
+        onMouseEnter={e => { e.currentTarget.style.background = "rgba(29,42,66,0.2)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = ""; }}
       >
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded-md grid place-items-center"
@@ -163,8 +151,8 @@ export function ChatPanel({ repository, isCollapsed, onToggle }: ChatPanelProps)
               style={{ color: "#475569", border: "1px solid rgba(29,42,66,0.5)" }}
               onClick={startNewChat}
               title="Start a new chat"
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#e2e8f4"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#475569"; }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#e2e8f4"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "#475569"; }}
             >
               <Plus size={9} />
               New

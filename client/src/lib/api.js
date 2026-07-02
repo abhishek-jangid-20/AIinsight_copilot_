@@ -2,28 +2,22 @@ import type { Repository } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-}
-
 export function getToken() {
   return localStorage.getItem("codeinsight_token");
 }
 
-export function setToken(token: string | null) {
+export function setToken(token) {
   if (token) localStorage.setItem("codeinsight_token", token);
   else localStorage.removeItem("codeinsight_token");
 }
 
 // ENH-009: Callback to trigger auto-logout on 401 responses anywhere in the app
-let _onUnauthorized: (() => void) | null = null;
-export function setUnauthorizedHandler(handler: () => void) {
+let _onUnauthorized = null;
+export function setUnauthorizedHandler(handler) {
   _onUnauthorized = handler;
 }
 
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function api(path, init = {}) {
   const token = getToken();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -41,101 +35,81 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) throw new Error(await response.text());
-  return (await response.json()) as T;
+  return await response.json();
 }
 
-export async function login(email: string, password: string) {
-  return api<{ token: string; user: AuthUser }>("/api/auth/login", {
+export async function login(email, password) {
+  return api("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password })
   });
 }
 
-export async function signup(name: string, email: string, password: string) {
-  return api<{ token: string; user: AuthUser }>("/api/auth/signup", {
+export async function signup(name, email, password) {
+  return api("/api/auth/signup", {
     method: "POST",
     body: JSON.stringify({ name, email, password })
   });
 }
 
 export async function currentUser() {
-  return api<{ user: AuthUser }>("/api/auth/me");
+  return api("/api/auth/me");
 }
 
 export async function listRepositories() {
-  return api<{ repositories: Repository[] }>("/api/repositories");
+  return api("/api/repositories");
 }
 
-export async function importGithub(url: string) {
-  return api<{ repository: Repository }>("/api/repositories/github", {
+export async function importGithub(url) {
+  return api("/api/repositories/github", {
     method: "POST",
     body: JSON.stringify({ url })
   });
 }
 
-export async function uploadZip(file: File, name?: string) {
+export async function uploadZip(file, name) {
   const form = new FormData();
   form.append("project", file);
   if (name) form.append("name", name);
-  return api<{ repository: Repository }>("/api/repositories/zip", { method: "POST", body: form });
+  return api("/api/repositories/zip", { method: "POST", body: form });
 }
 
-export async function deleteRepository(repositoryId: string) {
-  return api<{ deleted: boolean; id: string }>(`/api/repositories/${repositoryId}`, {
+export async function deleteRepository(repositoryId) {
+  return api(`/api/repositories/${repositoryId}`, {
     method: "DELETE"
   });
 }
 
-export async function semanticSearch(repositoryId: string, query: string) {
-  return api<{ results: Array<{ content: string; metadata: Record<string, unknown>; distance: number }> }>(
+export async function semanticSearch(repositoryId, query) {
+  return api(
     `/api/repositories/${repositoryId}/search`,
     { method: "POST", body: JSON.stringify({ query, limit: 8 }) }
   );
 }
 
-export async function repositoryGraph(repositoryId: string) {
+export async function repositoryGraph(repositoryId) {
   // FIX-011: Include repositoryId in the return type — the analysis service returns it
-  return api<{ repositoryId: string; nodes: Array<{ id: string; label: string; type: string }>; edges: Array<{ id: string; source: string; target: string; label: string }> }>(
-    `/api/repositories/${repositoryId}/graph`
-  );
+  return api(`/api/repositories/${repositoryId}/graph`);
 }
 
-export async function generateDocs(repositoryId: string) {
-  return api<{ readme: string; architecture: string; setup: string; modules: unknown[] }>(`/api/repositories/${repositoryId}/docs`, {
+export async function generateDocs(repositoryId) {
+  return api(`/api/repositories/${repositoryId}/docs`, {
     method: "POST"
   });
 }
 
-export async function explainFile(repositoryId: string, filePath: string, symbolName?: string) {
-  return api<{
-    repositoryId: string;
-    filePath: string;
-    symbols: Array<{ name: string; kind: string; startLine: number; endLine: number }>;
-    dependencies: Array<{ source: string; target: string; kind: string }>;
-    purpose: string;
-  }>(`/api/repositories/${repositoryId}/explain`, {
+export async function explainFile(repositoryId, filePath, symbolName) {
+  return api(`/api/repositories/${repositoryId}/explain`, {
     method: "POST",
     body: JSON.stringify({ filePath, symbolName })
   });
 }
 
-export async function listChats(repositoryId: string) {
-  return api<{
-    chats: Array<{
-      _id: string;
-      title: string;
-      messages: Array<{ role: string; content: string }>;
-      updatedAt: string;
-    }>
-  }>(`/api/repositories/${repositoryId}/chats`);
+export async function listChats(repositoryId) {
+  return api(`/api/repositories/${repositoryId}/chats`);
 }
 
-export async function streamChat(
-  repositoryId: string,
-  message: string,
-  onToken: (token: string) => void,
-  chatId?: string
-): Promise<{ chatId: string | null }> {
+export async function streamChat(repositoryId, message, onToken, chatId) {
   const token = getToken();
   const response = await fetch(`${API_BASE}/api/repositories/${repositoryId}/chat`, {
     method: "POST",

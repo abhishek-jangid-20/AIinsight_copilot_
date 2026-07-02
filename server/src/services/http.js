@@ -1,4 +1,4 @@
-export async function serviceJson<T>(url: string, init?: RequestInit): Promise<T> {
+export async function serviceJson(url, init) {
   const response = await fetch(url, {
     ...init,
     signal: AbortSignal.timeout(300000), // 5 minutes timeout for intensive tasks like embedding
@@ -13,5 +13,5 @@ export async function serviceJson<T>(url: string, init?: RequestInit): Promise<T
     throw new Error(`Service call failed ${response.status}: ${body}`);
   }
 
-  return (await response.json()) as T;
+  return await response.json();
 }

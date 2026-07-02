@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { SearchCode, FileCode2, SearchX, Loader2, AlertTriangle } from "lucide-react";
 import { semanticSearch } from "../lib/api";
-import type { Repository } from "../types";
 
 // ENH-004: Custom event to navigate CodeWorkspace to a search result
 export const NAVIGATE_TO_FILE_EVENT = "codeinsight:navigate-to-file";
-export function emitNavigateToFile(filePath: string, line: number) {
+export function emitNavigateToFile(filePath, line) {
   // FIX-008: Dispatch on the next tick so the CodeWorkspace event listener is
   // guaranteed to be registered even when it mounts after SearchPanel.
   setTimeout(() => {
@@ -14,7 +13,7 @@ export function emitNavigateToFile(filePath: string, line: number) {
   }, 0);
 }
 
-export function SearchPanel({ repository }: { repository: Repository }) {
+export function SearchPanel({ repository }) {
   const [query, setQuery] = useState("Find authentication and API entry points");
   const mutation = useMutation({ mutationFn: () => semanticSearch(repository._id, query) });
 
@@ -146,8 +145,8 @@ export function SearchPanel({ repository }: { repository: Repository }) {
                   border: "1px solid rgba(29,42,66,0.55)",
                   background: "rgba(17,24,41,0.6)"
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(67,217,255,0.35)"; (e.currentTarget as HTMLElement).style.background = "rgba(17,24,41,0.8)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(29,42,66,0.55)"; (e.currentTarget as HTMLElement).style.background = "rgba(17,24,41,0.6)"; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(67,217,255,0.35)"; e.currentTarget.style.background = "rgba(17,24,41,0.8)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(29,42,66,0.55)"; e.currentTarget.style.background = "rgba(17,24,41,0.6)"; }}
                 onClick={() => {
                   const fp = String(result.metadata.filePath);
                   const line = Number(result.metadata.startLine) || 1;

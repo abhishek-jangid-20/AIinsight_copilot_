@@ -23,7 +23,7 @@ export const repositoriesRouter = Router();
 repositoriesRouter.use(requireAuth);
 
 repositoriesRouter.get("/", async (req, res) => {
-  const repositories = await Repository.find({ ownerId: req.user!.id }).sort({ updatedAt: -1 });
+  const repositories = await Repository.find({ ownerId: req.user.id }).sort({ updatedAt: -1 });
   res.json({ repositories });
 });
 
@@ -33,7 +33,7 @@ repositoriesRouter.post("/github", async (req, res) => {
   let name = body.name;
   let normalizedUrl = body.url.trim().replace(/\/$/, "");
 
-  const githubMatch = normalizedUrl.match(/^https?:\/\/(?:www\.)?github\.com\/([^\/]+)\/([^\/]+)/i);
+  const githubMatch = normalizedUrl.match(/^https?:\/\/(?:www\.)?github\.com\/([^/]+)\/([^/]+)/i);
   if (githubMatch) {
     const owner = githubMatch[1];
     let repo = githubMatch[2];
@@ -51,7 +51,7 @@ repositoriesRouter.post("/github", async (req, res) => {
   }
 
   const repository = await Repository.create({
-    ownerId: req.user!.id,
+    ownerId: req.user.id,
     name,
     sourceType: "github",
     sourceUrl: normalizedUrl,
@@ -72,7 +72,7 @@ repositoriesRouter.post("/zip", upload.single("project"), async (req, res) => {
   if (!req.file) throw new HttpError(400, "Upload a ZIP archive in the project field");
 
   const repository = await Repository.create({
-    ownerId: req.user!.id,
+    ownerId: req.user.id,
     name: req.body.name || req.file.originalname.replace(/\.zip$/i, ""),
     sourceType: "zip",
     status: "queued"
@@ -90,18 +90,18 @@ repositoriesRouter.post("/zip", upload.single("project"), async (req, res) => {
 });
 
 repositoriesRouter.get("/:id", async (req, res) => {
-  const repository = await loadOwnedRepository(req.params.id, req.user!.id);
+  const repository = await loadOwnedRepository(req.params.id, req.user.id);
   res.json({ repository });
 });
 
 repositoriesRouter.get("/:id/files", async (req, res) => {
-  const repository = await loadOwnedRepository(req.params.id, req.user!.id);
-  const analysis = repository.analysis as { files?: unknown[] } | undefined;
+  const repository = await loadOwnedRepository(req.params.id, req.user.id);
+  const analysis = repository.analysis;
   res.json({ files: analysis?.files ?? [] });
 });
 
 repositoriesRouter.post("/:id/search", async (req, res) => {
-  await loadOwnedRepository(req.params.id, req.user!.id);
+  await loadOwnedRepository(req.params.id, req.user.id);
   const body = z.object({ query: z.string().min(2), limit: z.number().min(1).max(20).default(8) }).parse(req.body);
   const results = await serviceJson(`${env.EMBEDDING_SERVICE_URL}/repositories/${req.params.id}/search`, {
     method: "POST",
@@ -111,11 +111,11 @@ repositoriesRouter.post("/:id/search", async (req, res) => {
 });
 
 repositoriesRouter.post("/:id/chat", async (req, res) => {
-  const repository = await loadOwnedRepository(req.params.id, req.user!.id);
+  const repository = await loadOwnedRepository(req.params.id, req.user.id);
   const body = z.object({ message: z.string().min(1), chatId: z.string().optional() }).parse(req.body);
   const chat =
-    (body.chatId ? await Chat.findOne({ _id: body.chatId, ownerId: req.user!.id }) : null) ??
-    (await Chat.create({ ownerId: req.user!.id, repositoryId: repository.id, messages: [] }));
+    (body.chatId ? await Chat.findOne({ _id: body.chatId, ownerId: req.user.id }) : null) ??
+    (await Chat.create({ ownerId: req.user.id, repositoryId: repository.id, messages: [] }));
 
   chat.messages.push({ role: "user", content: body.message });
   await chat.save();
@@ -124,8 +124,8 @@ repositoriesRouter.post("/:id/chat", async (req, res) => {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      // LOGIC-005: Forward user identity to MiniGPT and other services
-      "x-user-id": req.user!.id,
+      // LOGIC-005: Forward user identity to RAG service
+      "x-user-id": req.user.id,
     },
     body: JSON.stringify({ query: body.message, chatId: chat.id })
   });
@@ -164,7 +164,7 @@ repositoriesRouter.post("/:id/chat", async (req, res) => {
 });
 
 repositoriesRouter.post("/:id/docs", async (req, res) => {
-  const repository = await loadOwnedRepository(req.params.id, req.user!.id);
+  const repository = await loadOwnedRepository(req.params.id, req.user.id);
   // FIX-003: Guard against null analysis — microservice requires a valid RepositoryAnalysis body
   if (!repository.analysis) {
     res.json({ readme: "", architecture: "", setup: "", modules: [] });
@@ -178,7 +178,7 @@ repositoriesRouter.post("/:id/docs", async (req, res) => {
 });
 
 repositoriesRouter.get("/:id/graph", async (req, res) => {
-  const repository = await loadOwnedRepository(req.params.id, req.user!.id);
+  const repository = await loadOwnedRepository(req.params.id, req.user.id);
   // FIX-002: Guard against null analysis — microservice requires a valid RepositoryAnalysis body
   if (!repository.analysis) {
     res.json({ repositoryId: req.params.id, nodes: [], edges: [] });
@@ -192,7 +192,7 @@ repositoriesRouter.get("/:id/graph", async (req, res) => {
 });
 
 repositoriesRouter.post("/:id/explain", async (req, res) => {
-  const repository = await loadOwnedRepository(req.params.id, req.user!.id);
+  const repository = await loadOwnedRepository(req.params.id, req.user.id);
   const body = z.object({ filePath: z.string(), symbolName: z.string().optional() }).parse(req.body);
   // FIX-002: Guard against null analysis for explain endpoint as well
   if (!repository.analysis) {
@@ -208,7 +208,7 @@ repositoriesRouter.post("/:id/explain", async (req, res) => {
 
 // ENH-001: Repository deletion — removes MongoDB doc and ChromaDB collection
 repositoriesRouter.delete("/:id", async (req, res) => {
-  const repository = await loadOwnedRepository(req.params.id, req.user!.id);
+  const repository = await loadOwnedRepository(req.params.id, req.user.id);
 
   // Best-effort: purge the ChromaDB collection via the embedding service
   try {
@@ -230,21 +230,21 @@ repositoriesRouter.delete("/:id", async (req, res) => {
 
 // ENH-003: Load chat history for a repository
 repositoriesRouter.get("/:id/chats", async (req, res) => {
-  await loadOwnedRepository(req.params.id, req.user!.id);
+  await loadOwnedRepository(req.params.id, req.user.id);
   const chats = await Chat.find({
     repositoryId: req.params.id,
-    ownerId: req.user!.id
+    ownerId: req.user.id
   }).sort({ updatedAt: -1 }).limit(10);
   res.json({ chats });
 });
 
-async function loadOwnedRepository(id: string, ownerId: string) {
+async function loadOwnedRepository(id, ownerId) {
   const repository = await Repository.findOne({ _id: id, ownerId });
   if (!repository) throw new HttpError(404, "Repository not found");
   return repository;
 }
 
-function extractMessagePayload(eventText: string) {
+function extractMessagePayload(eventText) {
   if (eventText.split("\n").some((line) => line === "event: citations" || line === "event: done")) {
     return "";
   }

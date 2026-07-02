@@ -3,15 +3,7 @@ import { env } from "../config/env.js";
 import { Repository } from "../models.js";
 import { serviceJson } from "./http.js";
 
-export interface ParseRequest {
-  repositoryId: string;
-  name: string;
-  sourceType: "github" | "zip";
-  sourceUrl?: string;
-  archivePath?: string;
-}
-
-export async function runRepositoryIngestion(request: ParseRequest) {
+export async function runRepositoryIngestion(request) {
   const repository = await Repository.findById(request.repositoryId);
   if (!repository) return;
 
@@ -19,7 +11,7 @@ export async function runRepositoryIngestion(request: ParseRequest) {
     repository.status = "parsing";
     await repository.save();
 
-    const analysis = await serviceJson<unknown>(`${env.PARSER_SERVICE_URL}/parse`, {
+    const analysis = await serviceJson(`${env.PARSER_SERVICE_URL}/parse`, {
       method: "POST",
       body: JSON.stringify(request)
     });
@@ -43,10 +35,6 @@ export async function runRepositoryIngestion(request: ParseRequest) {
     await repository.save();
   } finally {
     // FIX-001: Best-effort cleanup of the uploaded ZIP archive.
-    // NOTE: archivePath is a path on the server container's filesystem.
-    // If the parser service runs in a separate container without a shared volume,
-    // the archive must be accessible there (e.g. via a shared bind-mount) before
-    // this cleanup fires. The finally block runs regardless of success or failure.
     if (request.archivePath) {
       fs.unlink(request.archivePath, (err) => {
         if (err && err.code !== "ENOENT") {

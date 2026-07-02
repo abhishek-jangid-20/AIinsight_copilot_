@@ -10,8 +10,8 @@ export const minigptRouter = Router();
 minigptRouter.use(requireAuth);
 
 /** Forward the authenticated user's ID to the MiniGPT service for per-user session isolation (LOGIC-005) */
-function userHeaders(req: import("express").Request): Record<string, string> {
-  return { "x-user-id": req.user!.id };
+function userHeaders(req) {
+  return { "x-user-id": req.user.id };
 }
 
 minigptRouter.post("/init", async (req, res) => {
@@ -77,7 +77,7 @@ minigptRouter.get("/state", async (req, res) => {
   res.json(result);
 });
 
-minigptRouter.get("/wikitext", async (req, res) => {
+minigptRouter.get("/wikitext", async (_req, res) => {
   const result = await serviceJson(`${env.MINIGPT_SERVICE_URL}/lab/wikitext`, {
     method: "GET"
   });
