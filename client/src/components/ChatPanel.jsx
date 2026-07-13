@@ -1,3 +1,46 @@
+/**
+ * ---------------------------------------------------------
+ * Component: ChatPanel
+ * ---------------------------------------------------------
+ *
+ * Purpose:
+ *   Renders the bottom collapsible AI Assistant chat interface.
+ *   Provides semantic codebase Q&A using RAG (Retrieval-Augmented Generation)
+ *   by streaming responses from the LLM based on repository vector indices.
+ *
+ * Responsibilities:
+ * - Displays assistant and user dialogue messages.
+ * - Streams assistant tokens in real-time.
+ * - Restores previous chat session threads from the backend database.
+ * - Auto-scrolls to the bottom as new tokens arrive.
+ * - Manages state resets and thread cleanups upon selecting a different repository.
+ *
+ * Props:
+ * - repository: The active repository object containing status and metadata.
+ * - isCollapsed: Toggles the panels heights (collapsed minimal view vs expanded chat area).
+ * - onToggle: Callback firing when clicking header to collapse/expand panel.
+ *
+ * State:
+ * - message (string): Controlled input state for typing questions.
+ * - messages (array): Current dialogue thread list: [{ role: "user" | "assistant", content: string }]
+ * - streaming (boolean): True when actively receiving tokens from the SSE reader.
+ * - error (string | null): Error messages displayed in the alert banner.
+ * - chatId (string | null): Active database chat thread ID (keeps dialogue history linked).
+ * - isLoadingHistory (boolean): Tracks historical threads API fetch indicators.
+ *
+ * Lifecycle / Hooks:
+ * 1. useRef (scrollRef): Binds to the scrollable DOM wrapper to programmatically force bottom alignment.
+ * 2. useRef (inputRef): Focuses the text input field after sending actions.
+ * 3. useRef (historyLoadedRef): Caches the repository ID for which history has already been loaded, preventing duplicate requests during polling ticks.
+ * 4. useEffect (reset state): Fires when `repository._id` changes to wipe threads and reset prompts.
+ * 5. useEffect (load history): Fetches previous chat sessions once the selected repository is "ready".
+ * 6. useEffect (auto-scroll): Fires when messages append or panel expands to scroll to bottom.
+ *
+ * Related Files:
+ * - client/src/lib/api.js (streamChat SSE stream reader and listChats history API)
+ * - client/src/App.jsx (Coordinates active layout sizing and selections)
+ */
+
 import { useEffect, useRef, useState } from "react";
 import {
   Bot, Send, User, ChevronUp, ChevronDown,
@@ -12,14 +55,44 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
   const [error, setError] = useState(null);
   const [chatId, setChatId] = useState(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  
+  /**
+   * =============================================================================
+   * REACT CONCEPT: useRef (DOM Referencing)
+   * =============================================================================
+   * Definition:
+   *   A hook that returns a mutable ref object whose `.current` property is initialized
+   *   to the passed argument. Crucially, mutating `.current` does NOT trigger a re-render.
+   *
+   * Why it is used here:
+   *   - `scrollRef` and `inputRef` are used to directly read and mutate DOM node parameters
+   *     (such as `.scrollTop` and calling `.focus()`), bypassing React's virtual DOM.
+   *
+   * References:
+   * - https://react.dev/reference/react/useRef
+   */
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
-  // FIX-014: Track whether we've already loaded history for the current repo
-  // so a status-change re-render doesn't wipe the conversation.
+
+  /**
+   * =============================================================================
+   * REACT CONCEPT: useRef (State Caching / Instance Variable)
+   * =============================================================================
+   * Why it is used here:
+   *   `historyLoadedRef` tracks the active repository ID we have fetched history for.
+   *   Since `App.jsx` polls repositories every 5 seconds, this component re-renders
+   *   frequently. Using a ref allows us to save the cache record across renders
+   *   WITHOUT triggering re-render loops that occur if we saved this to a useState.
+   */
   const historyLoadedRef = useRef(null);
 
-  // FIX-014: Reset conversation state ONLY when the active repository changes,
-  // not on every status poll cycle. History is loaded in a separate effect.
+  /**
+   * Cleans up dialogue thread states upon selecting a different repository.
+   *
+   * Timeline:
+   * User clicks Repository A -> repository._id changes -> useEffect triggers
+   * -> Clear messages -> Set default prompt.
+   */
   useEffect(() => {
     setMessages([]);
     setChatId(null);
@@ -28,7 +101,14 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
     historyLoadedRef.current = null;
   }, [repository._id]);
 
-  // FIX-014: Load history once, when the repo reaches "ready" for the first time.
+  /**
+   * Fetches historical chat thread database records.
+   *
+   * Why the dependencies array was chosen:
+   *   Triggers when the selected repository ID updates, or its parsing status changes.
+   *   We verify the status is "ready" and ensure `historyLoadedRef.current` does not
+   *   already match `repository._id` to prevent duplicate API queries.
+   */
   useEffect(() => {
     if (repository.status !== "ready") return;
     if (historyLoadedRef.current === repository._id) return; // already loaded
@@ -51,13 +131,29 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
       .finally(() => setIsLoadingHistory(false));
   }, [repository._id, repository.status]);
 
-  // Auto-scroll to bottom on new messages
+  /**
+   * Auto-scrolls the chat window to the bottom.
+   * Runs after the DOM paints messages following message list changes or collapse toggles.
+   */
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isCollapsed]);
 
+  /**
+   * Submits a user message to the streaming assistant.
+   *
+   * Why async/await?
+   *   Handles asynchronous stream decoding in linear try-catch blocks.
+   *
+   * Process:
+   * 1. Add user question and an empty assistant placeholder to the dialogue list.
+   * 2. Turn on token streaming loader.
+   * 3. Invoke streamChat API, passing a callback that appends incoming tokens to the assistant's placeholder.
+   * 4. Update the active database chatId once returned by the backend.
+   * 5. If the stream errors out, clean up the empty assistant placeholder and restore the user's question to the input box.
+   */
   async function send() {
     if (!message.trim() || streaming || repository.status !== "ready") return;
     const userMessage = message.trim();
@@ -95,7 +191,7 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
     }
   }
 
-  // Start a new chat session
+  // Resets conversation states to start a new assistant thread session
   function startNewChat() {
     setMessages([]);
     setChatId(null);
@@ -108,7 +204,10 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
   return (
     <section className="flex flex-col h-full overflow-hidden"
       style={{ background: "rgba(7,9,26,0.7)", backdropFilter: "blur(12px)" }}>
-      {/* ── Header ── */}
+      {/* =======================================================================
+         Chat Panel Header
+         Clicking toggles panel height. Contains new thread buttons.
+      ======================================================================= */}
       <div
         className="flex h-10 shrink-0 items-center justify-between px-4 cursor-pointer transition select-none"
         style={{ borderBottom: "1px solid rgba(29,42,66,0.6)" }}
@@ -143,7 +242,7 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
           )}
         </div>
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          {/* ENH-003: New chat button */}
+          {/* Start New Thread button (only visible if chat list contains messages) */}
           {messages.length > 0 && !streaming && (
             <button
               type="button"
@@ -164,12 +263,15 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
         </div>
       </div>
 
-      {/* ── Body ── */}
+      {/* =======================================================================
+         Chat Body & Messages
+         Rendered conditionally based on the collapsed state.
+      ======================================================================= */}
       {!isCollapsed && (
         <div className="flex flex-col flex-1 min-h-0">
-          {/* Messages scroll area */}
+          {/* Message scroll viewport */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-            {/* Welcome / empty state */}
+            {/* Welcome / Empty workspace instructions */}
             {messages.length === 0 && !isLoadingHistory && (
               <div className="flex flex-col items-center justify-center h-full gap-3 py-4 text-center animate-fade-in">
                 <div className="w-10 h-10 rounded-xl grid place-items-center"
@@ -191,7 +293,7 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
               </div>
             )}
 
-            {/* Message list */}
+            {/* Rendered Dialogue Thread List */}
             {messages.map((msg, idx) => {
               const isLastAssistant = idx === messages.length - 1 && msg.role === "assistant";
               const isStreamingThisMsg = isLastAssistant && streaming;
@@ -240,7 +342,7 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
             })}
           </div>
 
-          {/* Error banner */}
+          {/* Error Alert Display Box */}
           {error && (
             <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-[11px]"
               style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.2)", color: "#f87171" }}>
@@ -256,7 +358,7 @@ export function ChatPanel({ repository, isCollapsed, onToggle }) {
             </div>
           )}
 
-          {/* Input row */}
+          {/* Form input field container */}
           <form
             className="flex items-center gap-2 px-4 py-2.5 shrink-0"
             style={{ borderTop: "1px solid rgba(29,42,66,0.6)" }}

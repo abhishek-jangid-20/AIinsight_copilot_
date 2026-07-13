@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "lint": "eslint src --ext js,jsx"
+    "lint": "eslint src"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",

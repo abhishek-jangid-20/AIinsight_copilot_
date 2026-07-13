@@ -1,3 +1,33 @@
+"""
+---------------------------------------------------------
+Folder: services/
+Location: client/src/../services/
+---------------------------------------------------------
+
+Folder Purpose:
+  The `services` folder houses the Python microservices that execute CPU-intensive
+  tasks like AST parsing, OpenAI embeddings computation, Chroma vector DB storage,
+  and AI documentation generation.
+
+---------------------------------------------------------
+File: main.py
+Location: services/analysis-service/main.py
+---------------------------------------------------------
+
+Purpose:
+  FastAPI service responsible for generating codebase dependency graphs
+  and computing structural code explanations.
+
+Responsibilities:
+- Maps files and AST relationships into nodes and edges for visualization.
+- Extracts and formats structural summaries of file objects.
+- Parses code docstrings to fetch file purpose summaries if structural symbols are absent.
+
+Related Files:
+- server/src/routes/repositories.js (Invokes /graph and /explain gateway proxies)
+- services/common/models.py (Provides RepositoryAnalysis schemas)
+"""
+
 from __future__ import annotations
 
 from fastapi import FastAPI
@@ -8,6 +38,7 @@ from common.models import RepositoryAnalysis
 app = FastAPI(title="CodeInsight Analysis Service", version="0.1.0")
 
 
+# Pydantic Model: Defines validation schemas for incoming file explanation requests
 class ExplainRequest(BaseModel):
     filePath: str
     symbolName: str | None = None
@@ -21,6 +52,13 @@ def health():
 
 @app.post("/repositories/{repository_id}/graph")
 def graph(repository_id: str, analysis: RepositoryAnalysis):
+    """
+    Constructs a visual graph representation of the codebase using files and symbols.
+    
+    Optimization Constraints:
+    - Symbols are capped at 250 and dependencies at 500 to keep the resulting graph
+      lightweight for client-side rendering.
+    """
     file_nodes = [{"id": file.path, "type": "file", "label": file.path, "language": file.language} for file in analysis.files]
     symbol_nodes = [
         {"id": f"{symbol.filePath}:{symbol.name}", "type": symbol.kind, "label": symbol.name, "filePath": symbol.filePath}
@@ -37,6 +75,9 @@ def graph(repository_id: str, analysis: RepositoryAnalysis):
 
 @app.post("/repositories/{repository_id}/explain")
 def explain(repository_id: str, request: ExplainRequest):
+    """
+    Queries code symbols and imports to output a file-level analysis summary.
+    """
     candidates = [
         symbol for symbol in request.analysis.symbols
         if symbol.filePath == request.filePath and (request.symbolName is None or symbol.name == request.symbolName)
@@ -55,9 +96,14 @@ def explain(repository_id: str, request: ExplainRequest):
 
 def _purpose(file_info, symbols: list) -> str:
     """
-    LOGIC-010: Generate a meaningful purpose description for a file.
-    Describes the module's role based on its symbols and structural position,
-    rather than returning raw source code.
+    Generates a concise textual description of a file based on its structural properties.
+    
+    Process:
+    1. Check for files metadata. If none, exit.
+    2. Group symbols by type (classes, functions, api routes).
+    3. If symbols exist, format a summary string showing exports.
+    4. Fallback: Parse the first 30 lines of code content looking for comments or docstrings.
+       Return the first 3 lines of comments as a fallback description.
     """
     if not file_info:
         return "No source information available for this module."
@@ -85,7 +131,7 @@ def _purpose(file_info, symbols: list) -> str:
     if parts:
         return f"{header} — " + "; ".join(parts) + "."
 
-    # Fallback: summarize the first meaningful comment or docstring lines
+    # Fallback: Parse the first 30 lines of code content looking for comments or docstrings.
     content = file_info.content or ""
     comment_lines = []
     for line in content.splitlines()[:30]:

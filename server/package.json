@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "build": "echo 'No build required for server'",
     "dev": "node --watch src/index.js",
     "start": "node src/index.js"
   },

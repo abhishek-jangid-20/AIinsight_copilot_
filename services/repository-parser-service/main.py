@@ -1,4 +1,28 @@
+"""
+---------------------------------------------------------
+File: main.py
+Location: services/repository-parser-service/main.py
+---------------------------------------------------------
+
+Purpose:
+  FastAPI service coordinating codebase AST analysis and chunking.
+  Clones remote repos or unpacks ZIPs, extracts classes and methods,
+  and outputs chunk partitions.
+
+Responsibilities:
+- Materializes codebases (git clone or unzip).
+- Implements security filters protecting against malicious GitHub URLs.
+- Extracts classes, methods, functions, and import paths using AST parsers and regex.
+- Segments source files into sliding-window text chunks.
+
+Related Files:
+- server/src/services/pipeline.js (Triggers parsing pipeline)
+- services/common/models.py (Provides RepositoryAnalysis structures)
+"""
+
 from __future__ import annotations
+
+from typing import Literal
 
 import ast
 import hashlib
@@ -16,6 +40,7 @@ from common.models import CodeChunk, CodeSymbol, DependencyEdge, RepositoryAnaly
 
 app = FastAPI(title="CodeInsight Repository Parser", version="0.1.0")
 
+# Map of supported file extensions to language names
 SUPPORTED = {
     ".js": "JavaScript",
     ".jsx": "JavaScript",
@@ -31,7 +56,7 @@ SUPPORTED = {
 CONFIG_FILES = {"package.json", "requirements.txt", "pyproject.toml", "pom.xml", "build.gradle", "docker-compose.yml", "Dockerfile"}
 IGNORE_DIRS = {".git", "node_modules", "dist", "build", ".venv", "venv", "__pycache__", "target", ".next"}
 
-# GitHub URL pattern — only allow standard github.com URLs
+# GitHub URL regex: restrains imports to standard github.com domains
 GITHUB_URL_RE = re.compile(r"^https?://(?:www\.)?github\.com/([^/]+)/([^/]+)", re.IGNORECASE)
 
 
@@ -50,6 +75,10 @@ def health():
 
 @app.post("/parse", response_model=RepositoryAnalysis)
 def parse_repository(request: ParseRequest):
+    """
+    Main Parsing Controller.
+    Downloads the codebase, extracts files/symbols, and splits code into database chunks.
+    """
     workdir = Path(tempfile.mkdtemp(prefix="codeinsight-"))
     try:
         root = _materialize_repository(request, workdir)
@@ -106,12 +135,20 @@ def parse_repository(request: ParseRequest):
 
 
 def _materialize_repository(request: ParseRequest, workdir: Path) -> Path:
+    """
+    Downloads codebases locally.
+    Supports GitHub clone (with branch specifications) and ZIP unarchiving.
+    
+    Security Controls:
+    * Owner and repository fields are validated against strict regex bounds
+      to prevent path traversal or shell exploits.
+    """
     if request.sourceType == "github":
         if not request.sourceUrl:
             raise ValueError("sourceUrl is required for GitHub repositories")
         target = workdir / "repo"
 
-        # Normalize and parse GitHub URL — SEC-004: only allow github.com
+        # Validate URL matches standard github.com patterns
         url = request.sourceUrl.strip().rstrip("/")
         match = GITHUB_URL_RE.match(url)
         if not match:
@@ -126,8 +163,7 @@ def _materialize_repository(request: ParseRequest, workdir: Path) -> Path:
         if repo.endswith(".git"):
             repo = repo[:-4]
 
-        # FIX-017: Strict allowlist on owner/repo to prevent path traversal or
-        # unexpected git behaviour. GitHub itself enforces these rules.
+        # Enforce owner/repo character limits to block directory traversal or git injection attacks
         _SEGMENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
         for segment_name, segment_value in (("owner", owner), ("repo", repo)):
             if not _SEGMENT_RE.match(segment_value) or ".." in segment_value:
@@ -138,7 +174,7 @@ def _materialize_repository(request: ParseRequest, workdir: Path) -> Path:
 
         clone_url = f"https://github.com/{owner}/{repo}.git"
 
-        # Check if there is a branch specified in the tree/blob part
+        # Check for branch names inside path segments (e.g. /tree/dev-branch)
         branch: str | None = None
         path_parts = url.split(f"github.com/{owner}/{repo}/")
         if len(path_parts) > 1:
@@ -155,7 +191,7 @@ def _materialize_repository(request: ParseRequest, workdir: Path) -> Path:
             else:
                 Repo.clone_from(clone_url, target, depth=1)
         except Exception as e:
-            # Fallback: if cloning with branch failed, try cloning the base repo default branch
+            # Fallback: if cloning the branch fails, clone the default branch instead
             if branch:
                 try:
                     Repo.clone_from(clone_url, target, depth=1)
@@ -180,6 +216,10 @@ def _materialize_repository(request: ParseRequest, workdir: Path) -> Path:
 
 
 def _iter_source_files(root: Path):
+    """
+    Recursively iterates source files, filtering out folders like node_modules and .venv,
+    and limiting parsing to files smaller than 1MB.
+    """
     for path in root.rglob("*"):
         if any(part in IGNORE_DIRS for part in path.parts):
             continue
@@ -188,6 +228,9 @@ def _iter_source_files(root: Path):
 
 
 def _extract_symbols(file_path: str, language: str, content: str) -> list[CodeSymbol]:
+    """
+    Identifies code structures (classes, functions, API routes) in source files.
+    """
     if language == "Python":
         try:
             return _extract_python_symbols(file_path, content)
@@ -195,7 +238,7 @@ def _extract_symbols(file_path: str, language: str, content: str) -> list[CodeSy
             return []
 
     symbols: list[CodeSymbol] = []
-    patterns = [
+    patterns: list[tuple[Literal["function", "class", "method", "api", "import"], re.Pattern]] = [
         ("class", re.compile(r"^\s*(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_][\w]*)", re.MULTILINE)),
         ("function", re.compile(r"^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_][\w]*)", re.MULTILINE)),
         ("function", re.compile(r"^\s*(?:public|private|protected|static|\s)*[\w<>\[\]]+\s+([A-Za-z_][\w]*)\s*\([^;]*\)\s*\{", re.MULTILINE)),
@@ -206,7 +249,7 @@ def _extract_symbols(file_path: str, language: str, content: str) -> list[CodeSy
         for match in pattern.finditer(content):
             line_no = content[: match.start()].count("\n") + 1
             name = match.group(2) if kind == "api" and match.lastindex and match.lastindex >= 2 else match.group(1)
-            # BUG-007 / LOGIC-001: Use real brace-based block end for C-style languages; shorter window for API routes
+            # Find the end line using brace depth for C-style syntaxes, or default to a 20-line window for API routes
             if kind == "api":
                 end_line = min(len(lines), line_no + 20)
             else:
@@ -216,7 +259,10 @@ def _extract_symbols(file_path: str, language: str, content: str) -> list[CodeSy
 
 
 def _extract_python_symbols(file_path: str, content: str) -> list[CodeSymbol]:
-    """FIX-006: Correctly label class methods as 'method', not 'function'."""
+    """
+    Parses Python modules using Python's native AST parser.
+    Identifies classes and correctly labels methods (nested inside classes) vs top-level functions.
+    """
     symbols: list[CodeSymbol] = []
     tree = ast.parse(content)
 
@@ -250,6 +296,10 @@ def _extract_python_symbols(file_path: str, content: str) -> list[CodeSymbol]:
 
 
 def _extract_imports(language: str, content: str) -> list[str]:
+    """
+    Extracts module import paths to trace project dependencies.
+    Uses AST parsing for Python, and regex patterns for other languages.
+    """
     imports: set[str] = set()
     if language == "Python":
         try:
@@ -268,6 +318,12 @@ def _extract_imports(language: str, content: str) -> list[str]:
 
 
 def _chunk_file(repository_id: str, file_path: str, language: str, lines: list[str], imports: list[str], symbols: list[CodeSymbol]) -> list[CodeChunk]:
+    """
+    Splits files into code chunks.
+    * Generates chunks for each code symbol (classes/functions).
+    * Fills remaining gaps using a sliding-window chunker (120 lines).
+      Skips windows that overlap significantly (>=80%) with a symbol chunk.
+    """
     chunks: list[CodeChunk] = []
     symbol_ranges = sorted(symbols, key=lambda item: item.startLine)
 
@@ -279,8 +335,7 @@ def _chunk_file(repository_id: str, file_path: str, language: str, lines: list[s
             chunks.append(_chunk(repository_id, file_path, language, symbol.startLine, symbol.endLine, content, imports, symbol))
             covered_lines.update(range(symbol.startLine, symbol.endLine + 1))
 
-    # FIX-012: Only generate sliding-window chunks for lines NOT already fully covered by
-    # symbols. Partial coverage (< 80% overlap) still emits a window to catch file-level code.
+    # Generate sliding window chunks for remaining gaps
     window = 120
     for start in range(1, len(lines) + 1, window):
         end = min(start + window - 1, len(lines))
@@ -303,10 +358,10 @@ def _chunk(repository_id: str, file_path: str, language: str, start: int, end: i
 
 def _find_block_end(lines: list[str], start_line: int) -> int:
     """
-    FIX-005: Find the real end of a code block for C-style languages (JS/TS/Java/C++)
-    by counting brace depth, correctly skipping brace characters inside string literals
-    (single-quote, double-quote, backtick) and single-line // comments.
-    Falls back to start + 80 if no balanced braces are found.
+    Finds the end line of a block in C-style languages (JS/TS/Java/C++) by counting brace depth.
+    
+    Correctly ignores brace characters inside string literals (single/double quotes, backticks)
+    and single-line comments.
     """
     total = len(lines)
     depth = 0
@@ -314,20 +369,20 @@ def _find_block_end(lines: list[str], start_line: int) -> int:
 
     for i in range(start_line - 1, min(start_line + 300, total)):
         line = lines[i]
-        in_string: str | None = None  # tracks the opening quote character
+        in_string: str | None = None  # tracks the active opening quote character
         j = 0
         while j < len(line):
             ch = line[j]
 
-            # Detect start / end of a string literal
+            # Detect string literal boundaries
             if in_string is None:
-                # Single-line comment: skip the rest of the line
+                # Skip comments
                 if ch == "/" and j + 1 < len(line) and line[j + 1] == "/":
                     break
                 if ch in ('"', "'", "`"):
                     in_string = ch
             else:
-                # Escaped character inside a string — skip next char
+                # Skip escaped characters inside strings
                 if ch == "\\":
                     j += 2
                     continue
@@ -345,5 +400,5 @@ def _find_block_end(lines: list[str], start_line: int) -> int:
                     return i + 1  # 1-indexed
             j += 1
 
-    # Fallback: cap at start + 80 if no balanced braces found
+    # Fallback cap
     return min(total, start_line + 80)

@@ -23,6 +23,7 @@ services:
       - "8101:8101"
     volumes:
       - service_data:/data
+      - gateway_uploads:/app/uploads
 
   embedding-service:
     build:

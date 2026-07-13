@@ -1,3 +1,43 @@
+/**
+ * ---------------------------------------------------------
+ * Component: CodeWorkspace
+ * ---------------------------------------------------------
+ *
+ * Purpose:
+ *   Represents the primary workspace area containing a directory file browser tree,
+ *   a code viewer using Monaco Editor, and a retractable AI-driven file explanation drawer.
+ *
+ * Responsibilities:
+ * - Displays files grouped by top-level directories in an interactive browser tree.
+ * - Searches/filters files inside the tree dynamically using query inputs.
+ * - Restores the last active file path selection on a per-repository basis.
+ * - Listens for external navigation events emitted by the search drawer, automatically opening target lines.
+ * - Feches, parses, and overlays AI code summaries and symbol declarations.
+ *
+ * Props:
+ * - repository: The active repository metadata and parsed file structure list.
+ *
+ * State:
+ * - selectedPath (string | null): The file path of the currently opened source file.
+ * - showFiles (boolean): Collapses or expands the sidebar directory tree view.
+ * - filter (string): Controlled input string filtering the file browser.
+ * - targetLine (number | null): The line number requested to highlight and scroll to inside Monaco.
+ * - explainPanel (object | null): Contains the AI summary response payload { purpose, symbols }.
+ * - isExplaining (boolean): Tracks loading spinners during file explanation requests.
+ *
+ * Lifecycle / Hooks:
+ * 1. useEffect (sync selection memory): Keeps the global `repoFileMemory` map in sync when selectedPath changes.
+ * 2. useEffect (repo change): Restores the file selection state belonging to the newly loaded repository.
+ * 3. useEffect (navigate event listener): Subscribes to custom sibling communication events to snap browser tabs.
+ * 4. useMemo (selected file): Evaluates the active file object to prevent duplicate loop lookups.
+ * 5. useMemo (filter files): Filters files list by matching strings.
+ * 6. useMemo (group files): Groups files under common top-level directory names.
+ *
+ * Related Files:
+ * - client/src/components/SearchPanel.jsx (Emits NAVIGATE_TO_FILE_EVENT custom DOM events)
+ * - client/src/lib/api.js (explainFile endpoints)
+ */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
@@ -8,6 +48,7 @@ import {
 import { explainFile } from "../lib/api";
 import { NAVIGATE_TO_FILE_EVENT } from "./SearchPanel";
 
+// Maps codebase extensions to specific glow colors
 const LANG_COLOR = {
   TypeScript: "#43d9ff",
   JavaScript: "#f7c45f",
@@ -17,21 +58,31 @@ const LANG_COLOR = {
   Config:     "#94a3b8",
 };
 
-// LOGIC-008: Persistent per-repository file selection
+/**
+ * =============================================================================
+ * REACT CONCEPT: Scope & Session Memory Map
+ * =============================================================================
+ * Why define `repoFileMemory` outside the component?
+ *   Variables declared inside a React component function are redeclared on every
+ *   re-render. React state hooks persist data across renders, but clear when the
+ *   component unmounts. By declaring this JavaScript Map outside the component,
+ *   we create a persistent memory cache that survives the component unmounting
+ *   (e.g., when the user switches to the MiniGPT Lab view and back).
+ */
 const repoFileMemory = new Map();
 
 export function CodeWorkspace({ repository }) {
   const files = repository.analysis?.files ?? [];
 
-  // LOGIC-008: Restore last selected file for this repository
+  // Restore last selected file for this repository on mount
   const [selectedPath, setSelectedPath] = useState(
     () => repoFileMemory.get(repository._id) ?? null
   );
   const [showFiles, setShowFiles] = useState(true);
   const [filter, setFilter] = useState("");
-  // ENH-005: Target line to scroll/highlight in Monaco
+  // Target line to scroll/highlight in Monaco (emitted from Search Panel results)
   const [targetLine, setTargetLine] = useState(null);
-  // ENH-012: Explain panel state
+  // Retrieves AI file analysis explain summaries
   const [explainPanel, setExplainPanel] = useState(null);
   const [isExplaining, setIsExplaining] = useState(false);
 
@@ -47,7 +98,25 @@ export function CodeWorkspace({ repository }) {
     setExplainPanel(null);
   }, [repository._id]);
 
-  // ENH-004/005: Listen for navigate-to-file events from SearchPanel
+  /**
+   * =============================================================================
+   * REACT CONCEPT: Sibling Communication via Custom DOM Events
+   * =============================================================================
+   * Why?
+   *   React usually communicates data downwards using props, or globally using Context/Redux.
+   *   However, SearchPanel and CodeWorkspace are siblings. Lifting state up to App.jsx
+   *   is an option, but would trigger full-app renders on typing. Instead, we use
+   *   a native CustomEvent emitter. When a search card is clicked, we dispatch a
+   *   CustomEvent which this hook intercepts, setting the selected tab and scrolling Monaco.
+   *
+   * Cleanup (Unmounting):
+   *   Returning a function inside useEffect registers a cleanup callback. React executes
+   *   this when the component unmounts to remove the listener, preventing memory leaks.
+   *
+   * References:
+   * - https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent
+   * - https://react.dev/reference/react/useEffect#connecting-to-an-external-system
+   */
   useEffect(() => {
     const handler = (e) => {
       const { filePath, line } = e.detail;
@@ -60,18 +129,36 @@ export function CodeWorkspace({ repository }) {
     return () => window.removeEventListener(NAVIGATE_TO_FILE_EVENT, handler);
   }, [repository._id]);
 
+  /**
+   * =============================================================================
+   * REACT CONCEPT: useMemo (Optimization)
+   * =============================================================================
+   * Definition:
+   *   Caches the computed result of a function across renders, recalculating only
+   *   if values in the dependency array change.
+   *
+   * Why it is used here:
+   *   Grouping and filtering array lists are heavy calculations. Since this
+   *   workspace re-renders during AI typing, executing array filters on every render
+   *   degrades typing speeds. useMemo ensures grouping computations only run when
+   *   `files` or `filter` properties actually change.
+   *
+   * References:
+   * - https://react.dev/reference/react/useMemo
+   */
   const selected = useMemo(
     () => files.find((f) => f.path === selectedPath) ?? files[0],
     [files, selectedPath]
   );
 
+  // Memoized client filter matches
   const filtered = useMemo(() => {
     if (!filter.trim()) return files;
     const q = filter.toLowerCase();
     return files.filter((f) => f.path.toLowerCase().includes(q));
   }, [files, filter]);
 
-  // Group by top-level directory
+  // Memoized top-level directory grouping
   const grouped = useMemo(() => {
     const groups = new Map();
     for (const file of filtered) {
@@ -85,7 +172,7 @@ export function CodeWorkspace({ repository }) {
 
   const sidebarWidth = showFiles ? "240px" : "0px";
 
-  // ENH-012: Explain current file
+  // Requests AI explanations for the active file using api.js
   const handleExplainFile = async () => {
     if (!selected || !repository._id) return;
     setIsExplaining(true);
@@ -102,7 +189,7 @@ export function CodeWorkspace({ repository }) {
 
   return (
     <div className="h-full min-h-0 flex" style={{ overflow: "hidden" }}>
-      {/* ── File tree panel ── */}
+      {/* ── File Tree sidebar panel ── */}
       <div
         className="flex-shrink-0 flex flex-col overflow-hidden transition-all duration-200"
         style={{
@@ -113,7 +200,7 @@ export function CodeWorkspace({ repository }) {
           visibility: showFiles ? "visible" : "hidden"
         }}
       >
-        {/* Tree header */}
+        {/* Tree header tabs */}
         <div className="flex items-center justify-between px-3 h-10 shrink-0"
           style={{ borderBottom: "1px solid rgba(29,42,66,0.6)" }}>
           <div className="flex items-center gap-1.5">
@@ -127,7 +214,7 @@ export function CodeWorkspace({ repository }) {
           </div>
         </div>
 
-        {/* Filter */}
+        {/* Filter browser input field (visible only if files count is > 6) */}
         {files.length > 6 && (
           <div className="px-2 py-2 shrink-0" style={{ borderBottom: "1px solid rgba(29,42,66,0.4)" }}>
             <input
@@ -147,7 +234,7 @@ export function CodeWorkspace({ repository }) {
           </div>
         )}
 
-        {/* Status banner */}
+        {/* Ingestion progress or error status flags */}
         {repository.status !== "ready" && (
           <div className="mx-2 my-2 flex items-start gap-2 rounded-lg border px-2.5 py-2 text-[10px] shrink-0"
             style={repository.status === "failed"
@@ -166,7 +253,7 @@ export function CodeWorkspace({ repository }) {
           </div>
         )}
 
-        {/* File tree */}
+        {/* Directory browser list viewport */}
         <div className="flex-1 overflow-y-auto py-1">
           {files.length === 0 && repository.status === "ready" && (
             <div className="flex flex-col items-center gap-2 py-8 text-center px-3">
@@ -175,6 +262,7 @@ export function CodeWorkspace({ repository }) {
             </div>
           )}
 
+          {/* Directory folders rendering mapping */}
           {Array.from(grouped.entries()).map(([dir, groupFiles]) => (
             <div key={dir}>
               {dir && (
@@ -186,7 +274,6 @@ export function CodeWorkspace({ repository }) {
               {groupFiles.map((file) => {
                 const isActive = selected?.path === file.path;
                 const filename = file.path.split("/").pop() ?? file.path;
-                // LOGIC-009: Use file.language for color lookup instead of raw extension
                 const langColor = LANG_COLOR[file.language] ?? "#64748b";
                 const langLabel = file.language === "Config" ? (filename.split(".").pop() ?? "cfg") : file.language.toLowerCase().slice(0, 3);
                 return (
@@ -217,7 +304,6 @@ export function CodeWorkspace({ repository }) {
                   >
                     <FileCode2 size={12} className="shrink-0" />
                     <span className="truncate text-[11px]">{filename}</span>
-                    {/* LOGIC-009: Show consistent language label derived from file.language */}
                     <span className="ml-auto text-[8px] font-mono shrink-0 px-1 py-0.5 rounded"
                       style={{
                         background: isActive ? "rgba(67,217,255,0.12)" : "rgba(29,42,66,0.4)",
@@ -233,7 +319,7 @@ export function CodeWorkspace({ repository }) {
         </div>
       </div>
 
-      {/* ── Main editor area ── */}
+      {/* ── Monaco Editor Container ── */}
       <div className="flex-1 h-full min-h-0 flex flex-col min-w-0">
         {selected ? (
           <>
@@ -246,7 +332,7 @@ export function CodeWorkspace({ repository }) {
               onExplain={handleExplainFile}
               isExplaining={isExplaining}
             />
-            {/* ENH-012: Explain panel */}
+            {/*Retractable AI Explanation Pane */}
             {explainPanel && (
               <div className="shrink-0 overflow-auto px-4 py-3 space-y-2 text-[11px]"
                 style={{ borderTop: "1px solid rgba(29,42,66,0.7)", background: "rgba(7,9,26,0.8)", maxHeight: "220px" }}>
@@ -289,6 +375,21 @@ export function CodeWorkspace({ repository }) {
   );
 }
 
+// =============================================================================
+// Component: SourceViewer
+// =============================================================================
+/**
+ * Renders the Monaco Editor view, handling dynamic line highlights and scrolling.
+ *
+ * Props:
+ * - file: The active file object containing language, size, and source code content.
+ * - showFiles: Sidebar browser display toggle.
+ * - setShowFiles: Callback trigger to alter sidebar browser states.
+ * - targetLine: Target line to center focus on.
+ * - onTargetLineConsumed: Clears targetLine state to avoid refocussing loops.
+ * - onExplain: Triggers file explanation queries.
+ * - isExplaining: Loading state flag.
+ */
 function SourceViewer({
   file,
   showFiles,
@@ -299,19 +400,25 @@ function SourceViewer({
   isExplaining,
 }) {
   const filename = file.path.split("/").pop() ?? file.path;
-  // LOGIC-009: Use file.language for color, not raw extension
   const langColor = LANG_COLOR[file.language] ?? "#64748b";
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
 
-  // ENH-005: When targetLine changes, scroll Monaco to the target line and add a highlight decoration
+  /**
+   * Triggers scroll animations and injects decorative line highlights in Monaco.
+   *
+   * Dependencies:
+   *   Runs when targetLine updates (i.e. clicked card inside semantic search results).
+   */
   useEffect(() => {
     if (targetLine && editorRef.current && monacoRef.current) {
       const ed = editorRef.current;
       const monaco = monacoRef.current;
 
+      // Programmatically center target line inside editor window viewports
       ed.revealLineInCenter(targetLine);
 
+      // Create editor CSS decoration overlays
       const decorations = ed.createDecorationsCollection([{
         range: new monaco.Range(targetLine, 1, targetLine, 1),
         options: {
@@ -322,7 +429,7 @@ function SourceViewer({
         }
       }]);
 
-      // Clear highlight after 3 seconds
+      // Clear decorations after 3000ms
       const timer = setTimeout(() => {
         decorations.clear();
         onTargetLineConsumed();
@@ -334,7 +441,7 @@ function SourceViewer({
 
   return (
     <div className="grid h-full flex-1 min-h-0" style={{ gridTemplateRows: "40px minmax(0,1fr)" }}>
-      {/* Tab bar */}
+      {/* Editor tab navigation bar */}
       <div className="flex items-center gap-2 px-3 shrink-0"
         style={{ borderBottom: "1px solid rgba(29,42,66,0.6)", background: "rgba(7,9,26,0.5)" }}>
         <button
@@ -348,19 +455,20 @@ function SourceViewer({
           {showFiles ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
         </button>
 
-        {/* File tab */}
+        {/* Tab display */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] max-w-[300px]"
           style={{ background: "rgba(17,24,41,0.8)", border: "1px solid rgba(29,42,66,0.7)", color: "#94a3b8" }}>
           <FileCode2 size={11} className="shrink-0" style={{ color: "#43d9ff" }} />
           <span className="truncate font-mono">{filename}</span>
         </div>
 
+        {/* Language, size, and AI explain button metadata */}
         <div className="flex items-center gap-2 ml-auto text-[10px] font-mono" style={{ color: "#334155" }}>
           <span style={{ color: langColor }}>{file.language}</span>
           {file.size > 0 && (
             <span>{(file.size / 1024).toFixed(1)}kb</span>
           )}
-          {/* ENH-012: Explain file button */}
+          {/* AI explain file trigger button */}
           <button
             onClick={onExplain}
             disabled={isExplaining}
@@ -379,7 +487,7 @@ function SourceViewer({
         </div>
       </div>
 
-      {/* Monaco Editor */}
+      {/* Monaco React Editor Component */}
       <Editor
         theme="vs-dark"
         language={languageId(file.language)}
@@ -387,8 +495,8 @@ function SourceViewer({
         onMount={(editor, monaco) => {
           editorRef.current = editor;
           monacoRef.current = monaco;
-          // FIX-010: Inject highlight style only once — reuse the existing element
-          // to avoid accumulating hundreds of duplicate <style> tags across file switches.
+          
+          // Inject custom CSS styling for lines highlight once into the document head
           const STYLE_ID = "codeinsight-search-highlight";
           if (!document.getElementById(STYLE_ID)) {
             const style = document.createElement("style");
@@ -419,6 +527,7 @@ function SourceViewer({
   );
 }
 
+// Maps file.language fields to Monaco editor identifier strings
 function languageId(language) {
   const map = {
     JavaScript: "javascript",

@@ -1,35 +1,94 @@
+/**
+ * ---------------------------------------------------------
+ * Component: SearchPanel
+ * ---------------------------------------------------------
+ *
+ * Purpose:
+ *   Manages the Semantic Search sub-panel interface.
+ *   Enables users to ask questions in natural language about the codebase
+ *   and displays code snippet results matched by vector similarity.
+ *
+ * Responsibilities:
+ * - Directs semantic queries inputs.
+ * - Handles search submissions via TanStack Query mutations.
+ * - Renders skeleton placeholders during loading cycles.
+ * - Triggers CustomEvent emitters when clicking search results to navigate Monaco.
+ * - Disables search capabilities if the repository is not in "ready" status.
+ * - Resets query inputs and clears stale search results when the active repository changes.
+ *
+ * Props:
+ * - repository: The active repository database object (indexing statuses and keys).
+ *
+ * State:
+ * - query (string): Controlled input string representing the natural language query.
+ *
+ * Lifecycle / Hooks:
+ * 1. useMutation: Submits semantic queries to the search service, tracking request states.
+ * 2. useEffect: Triggers whenever `repository._id` changes to reset the query string.
+ *
+ * Related Files:
+ * - client/src/components/CodeWorkspace.jsx (Subscribes to file navigation events)
+ * - client/src/lib/api.js (semanticSearch API calls)
+ */
+
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { SearchCode, FileCode2, SearchX, Loader2, AlertTriangle } from "lucide-react";
 import { semanticSearch } from "../lib/api";
 
-// ENH-004: Custom event to navigate CodeWorkspace to a search result
+// Custom event key string for sibling tab navigations
 export const NAVIGATE_TO_FILE_EVENT = "codeinsight:navigate-to-file";
+
+/**
+ * Emits a custom DOM event to open a specific file and highlight a target line.
+ *
+ * Why setTimeout with 0ms?
+ *   In Javascript, `setTimeout(fn, 0)` pushes execution of `fn` to the end of the
+ *   event loop queue (the next tick). If CodeWorkspace is mounting at the same time
+ *   SearchPanel mounts, CodeWorkspace might not have registered its event listener
+ *   yet. Deferring the dispatch guarantees the listener is active and captures the event.
+ *
+ * Inputs:
+ * - filePath (string): File to select in browser.
+ * - line (number): Target line to scroll to.
+ *
+ * References:
+ * - https://javascript.info/settimeout-setinterval#zero-delay-settimeout
+ * - https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/dispatchEvent
+ */
 export function emitNavigateToFile(filePath, line) {
-  // FIX-008: Dispatch on the next tick so the CodeWorkspace event listener is
-  // guaranteed to be registered even when it mounts after SearchPanel.
   setTimeout(() => {
     window.dispatchEvent(new CustomEvent(NAVIGATE_TO_FILE_EVENT, { detail: { filePath, line } }));
   }, 0);
 }
 
 export function SearchPanel({ repository }) {
+  // Controlled input value
   const [query, setQuery] = useState("Find authentication and API entry points");
+
+  /**
+   * Triggers the semantic vector search API.
+   *
+   * Why a mutation instead of useQuery?
+   *   Queries run automatically on render. We only want to trigger search queries
+   *   explicitly when the user submits the search form. useMutation provides a
+   *   trigger callback `mutate()` that gives us manual execution control.
+   */
   const mutation = useMutation({ mutationFn: () => semanticSearch(repository._id, query) });
 
-  // FIX-013: Reset query and clear stale results when the active repository changes
+  // Reset query inputs and clear stale search results when the active repository changes
   useEffect(() => {
     setQuery("Find authentication and API entry points");
   }, [repository._id]);
 
-  // BUG-012: Disable search when repository is not ready
+  // Derived state: Search is disabled unless the repository has finished indexing
   const isReady = repository.status === "ready";
 
   return (
     <section className="h-full overflow-auto flex flex-col"
       style={{ background: "rgba(7,9,26,0.55)", borderBottom: "1px solid rgba(29,42,66,0.6)" }}>
 
-      {/* ── Header bar ── */}
+      {/* ── Search Panel Header ── */}
       <div className="flex items-center justify-between px-4 h-10 shrink-0"
         style={{ borderBottom: "1px solid rgba(29,42,66,0.5)", background: "rgba(6,10,18,0.4)" }}>
         <div className="flex items-center gap-2">
@@ -45,9 +104,9 @@ export function SearchPanel({ repository }) {
         )}
       </div>
 
-      {/* ── Search row ── */}
+      {/* ── Search Input Row ── */}
       <div className="px-3 py-2.5 shrink-0" style={{ borderBottom: "1px solid rgba(29,42,66,0.4)" }}>
-        {/* BUG-012: Show status notice when repo not ready */}
+        {/* Warning banner indicating indexing status */}
         {!isReady && (
           <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg text-[11px]"
             style={{ background: "rgba(247,196,95,0.07)", border: "1px solid rgba(247,196,95,0.2)", color: "#f7c45f" }}>
@@ -55,6 +114,7 @@ export function SearchPanel({ repository }) {
             <span>Search is available once indexing completes. Repository is <strong>{repository.status}</strong>.</span>
           </div>
         )}
+        
         <form
           className="flex items-center gap-2"
           onSubmit={(event) => {
@@ -105,7 +165,7 @@ export function SearchPanel({ repository }) {
           </button>
         </form>
 
-        {/* Error state */}
+        {/* Error State Banner */}
         {mutation.isError && (
           <p className="mt-2 text-[11px] px-3 py-2 rounded-lg"
             style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.18)", color: "#f87171" }}>
@@ -114,9 +174,9 @@ export function SearchPanel({ repository }) {
         )}
       </div>
 
-      {/* ── Results area ── */}
+      {/* ── Search Results Area ── */}
       <div className="flex-1 overflow-auto px-3 pb-3 pt-2 space-y-2">
-        {/* Loading skeletons */}
+        {/* Loading skeletons (displayed during mutation pending states) */}
         {mutation.isPending && (
           <div className="space-y-2 animate-fade-in">
             {[1, 2, 3].map((i) => (
@@ -134,7 +194,7 @@ export function SearchPanel({ repository }) {
           </div>
         )}
 
-        {/* Result cards — ENH-004: clickable to navigate CodeWorkspace */}
+        {/* Result cards mapping */}
         {!mutation.isPending && mutation.data?.results && mutation.data.results.length > 0 && (
           <div className="space-y-2 animate-fade-in">
             {mutation.data.results.map((result, index) => (
@@ -150,11 +210,12 @@ export function SearchPanel({ repository }) {
                 onClick={() => {
                   const fp = String(result.metadata.filePath);
                   const line = Number(result.metadata.startLine) || 1;
+                  // Dispatch custom DOM event to open file and scroll Monaco
                   emitNavigateToFile(fp, line);
                 }}
                 title="Click to open in editor"
               >
-                {/* File path + line badge */}
+                {/* File path + line numbers label */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <FileCode2 size={11} className="shrink-0" style={{ color: "rgba(67,217,255,0.5)" }} />
@@ -168,7 +229,7 @@ export function SearchPanel({ repository }) {
                   </span>
                 </div>
 
-                {/* Code preview with gradient fade */}
+                {/* Code preview block with gradient bottom fade */}
                 <div className="relative">
                   <pre className="code-block max-h-24 overflow-hidden text-[11px] leading-relaxed whitespace-pre-wrap break-all"
                     style={{ color: "#64748b" }}>
@@ -182,7 +243,7 @@ export function SearchPanel({ repository }) {
           </div>
         )}
 
-        {/* Empty / idle state */}
+        {/* Empty / Idle state instructions */}
         {!mutation.isPending && !mutation.data && !mutation.isError && (
           <div className="flex flex-col items-center justify-center gap-3 py-10 animate-fade-in">
             <div className="rounded-xl p-4" style={{ background: "rgba(6,10,18,0.5)", border: "1px solid rgba(29,42,66,0.5)" }}>
@@ -196,7 +257,7 @@ export function SearchPanel({ repository }) {
           </div>
         )}
 
-        {/* No results state */}
+        {/* No results match state */}
         {!mutation.isPending && mutation.data?.results?.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-3 py-10 animate-fade-in">
             <div className="rounded-xl p-4" style={{ background: "rgba(6,10,18,0.5)", border: "1px solid rgba(29,42,66,0.5)" }}>

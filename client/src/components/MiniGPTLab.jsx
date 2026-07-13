@@ -1,3 +1,62 @@
+/**
+ * ---------------------------------------------------------
+ * Component: MiniGPTLab
+ * ---------------------------------------------------------
+ *
+ * Purpose:
+ *   Renders the GPT Training Simulator Laboratory dashboard.
+ *   Provides an educational sandbox letting developers configure, compile,
+ *   train, and sample from a tiny causal Generative Pre-trained Transformer (GPT)
+ *   directly from their web browsers.
+ *
+ * Responsibilities:
+ * - Directs compilation parameters: layers, attention heads, embedding size, context length.
+ * - Drives active training batch loops using recursive timeouts synchronizing parameters.
+ * - Charts training loss curves dynamically.
+ * - Interacts with autoregressive text generators: temperature, seed tokens, top-K selection.
+ * - Pre-loads dataset corpuses: Shakespeare, Finance, and WikiText.
+ *
+ * Props:
+ *   None.
+ *
+ * State:
+ * - corpusText (string): The text dataset dataset compiled to train the vocab.
+ * - nLayer (number): The number of transformer block layers (n_layer).
+ * - nHead (number): The number of attention heads inside self-attention calculations.
+ * - nEmbd (number): The vector dimension size of code embeddings (n_embd).
+ * - blockSize (number): The maximum sequence context length (block_size).
+ * - initialized (boolean): True once the model's vocabulary maps have compiled.
+ * - isInitializing (boolean): Shows compiler loading spinners.
+ * - vocabSize (number): Unique characters count discovered inside text datasets.
+ * - lr (number): Learning rate multiplier mapping gradient update steps.
+ * - batchSize (number): Count of sequence chunks processed per training step.
+ * - isTraining (boolean): Triggers the continuous asynchronous training loop.
+ * - stepsPerClick (number): Iteration count computed per training request.
+ * - currentStep (number): Active training iterations counter.
+ * - gradNorm (number | null): The scalar norm value representing gradient updates.
+ * - lossHistory (array): Coordinates array representing historical training steps [{ step, trainLoss, valLoss }].
+ * - seedText (string): The start prompt string fed to autoregressive generators.
+ * - genTokensCount (number): Count of tokens to predict autoregressively.
+ * - temperature (number): Controls text creativity: higher = creative/random, lower = deterministic.
+ * - topK (number): Restricts vocabulary choices to the top-K highest-probability tokens.
+ * - generatedText (string): Text string returned by token predictions.
+ * - isGenerating (boolean): Shows token prediction loading spinners.
+ * - attentionMaps (array): Visualization matrices mapping token attention.
+ * - tokenLabels (array): Labels indicating generated token splits.
+ * - isLoadingWikitext (boolean): Shows WikiText dataset fetch spinner.
+ *
+ * Lifecycle / Hooks:
+ * 1. useEffect (boot): Syncs simulation states on initial load to restore sessions.
+ * 2. useRef (trainingIntervalRef): Holds a reference to the active loop timeout index for cleanups.
+ * 3. useRef (lrRef / batchSizeRef / stepsPerClickRef): Caches slider state settings so background timeout loops can access real-time changes without resetting variables.
+ * 4. useRef (isTrainingRef): Guards loop conditions inside asynchronous callbacks.
+ * 5. useEffect (training loop): Runs recursive setTimeout batches when isTraining turns true.
+ *
+ * Related Files:
+ * - client/src/components/minigpt/LossChart.jsx (Renders SVG training loss curves)
+ * - client/src/lib/api.js (Interacts with MiniGPT sandbox APIs)
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import { Play, Pause, FastForward, RotateCcw, Cpu, Sparkles, BookOpen, GraduationCap } from "lucide-react";
 import { api } from "../lib/api";
@@ -39,7 +98,10 @@ export function MiniGPTLab() {
   // Background loop interval reference
   const trainingIntervalRef = useRef(null);
 
-  // Sync state on load
+  /**
+   * Restores historical training logs and compiled parameters on initial load.
+   * Also returns a cleanup function to wipe background training timeouts when unmounting.
+   */
   useEffect(() => {
     async function fetchState() {
       try {
@@ -60,6 +122,7 @@ export function MiniGPTLab() {
     }
     void fetchState();
     
+    // Cleanup callback clearing background timeout loops
     return () => {
       if (trainingIntervalRef.current) {
         window.clearInterval(trainingIntervalRef.current);
@@ -67,7 +130,7 @@ export function MiniGPTLab() {
     };
   }, []);
 
-  // Initialize model & vocabulary builder
+  // Compiles datasets and initializes vocabulary maps
   const handleInitialize = async () => {
     setIsInitializing(true);
     try {
@@ -96,7 +159,25 @@ export function MiniGPTLab() {
     }
   };
 
-  // Keep training configuration refs so the active loop always uses the latest slider settings
+  /**
+   * =============================================================================
+   * REACT CONCEPT: Caching State variables in refs to avoid Stale Closures
+   * =============================================================================
+   * Why?
+   *   React useEffect hooks only capture state values at the time they are invoked.
+   *   If we run a training loop inside `useEffect` and the user alters the Learning Rate
+   *   slider, the active loop callback cannot read the update because it is trapped in
+   *   a "stale closure" of the old render scope.
+   *
+   * Solution:
+   *   On every render, we sync the latest state values to local mutable refs (e.g. `lrRef.current = lr`).
+   *   Since refs share a single mutable reference, the background asynchronous timeout
+   *   functions can read the newest values by accessing the ref fields directly.
+   *
+   * References:
+   * - https://react.dev/learn/referencing-values-with-refs
+   * - https://react.dev/reference/react/useRef#avoiding-recreating-the-ref-contents
+   */
   const lrRef = useRef(lr);
   lrRef.current = lr;
   const batchSizeRef = useRef(batchSize);
@@ -104,11 +185,11 @@ export function MiniGPTLab() {
   const stepsPerClickRef = useRef(stepsPerClick);
   stepsPerClickRef.current = stepsPerClick;
 
-  // Active training status ref
+  // Sync active training status flags
   const isTrainingRef = useRef(isTraining);
   isTrainingRef.current = isTraining;
 
-  // Perform training step(s)
+  // Performs step queries updating steps and losses
   const handleTrainStep = async (stepsOverride) => {
     try {
       const res = await api("/api/minigpt/train-step", {
@@ -132,7 +213,21 @@ export function MiniGPTLab() {
     }
   };
 
-  // Manage recursive timeout loop for continuous training
+  /**
+   * =============================================================================
+   * REACT CONCEPT: Asynchronous Loops via Recursive setTimeout
+   * =============================================================================
+   * Why use recursive setTimeout instead of setInterval?
+   *   - `setInterval(fn, delay)` triggers `fn` precisely every `delay` ms. If the API
+   *     request takes longer to finish than the delay, requests queue up on the server
+   *     and crash the browser.
+   *   - Recursive `setTimeout` triggers the next run ONLY after the current network
+   *     fetch completes. This guarantees sequential executions, adapting the step
+   *     speed to the network latency.
+   *
+   * References:
+   * - https://javascript.info/settimeout-setinterval#nested-settimeout
+   */
   useEffect(() => {
     let timeoutId = null;
 
@@ -142,7 +237,7 @@ export function MiniGPTLab() {
       await handleTrainStep(stepsPerClickRef.current);
       
       if (isTrainingRef.current) {
-        // Use minimal delay (50ms) for fast training; UI updates happen async
+        // Enqueue next loop execution on loop completion
         timeoutId = window.setTimeout(runLoop, 50);
       }
     };
@@ -151,6 +246,7 @@ export function MiniGPTLab() {
       void runLoop();
     }
 
+    // Cleanup: Clear active timeouts if training is paused or component unmounts
     return () => {
       if (timeoutId) {
         window.clearTimeout(timeoutId);
@@ -158,12 +254,12 @@ export function MiniGPTLab() {
     };
   }, [isTraining]);
 
-  // Toggle continuous training loops
+  // Toggles the active status of continuous training loops
   const toggleTrainingLoop = () => {
     setIsTraining(!isTraining);
   };
 
-  // Text Sequence Generation
+  // Triggers autoregressive token prediction algorithms on compiled models
   const handleGenerateText = async () => {
     setIsGenerating(true);
     try {
@@ -272,7 +368,10 @@ True financial freedom is not about becoming fabulously wealthy. It is about hav
   return (
     <div className="grid h-full grid-cols-1 lg:grid-cols-[380px_1fr] overflow-hidden min-h-0 bg-ink">
       
-      {/* LEFT COLUMN: Data Prep & Architecture Config */}
+      {/* =======================================================================
+         Left Column: Data Prep & Hyperparameter Sliders
+         Controls token lists compilation.
+      ======================================================================= */}
       <aside className="border-r border-line bg-panel/30 p-5 overflow-y-auto flex flex-col gap-6">
         
         {/* Dataset Prep Panel */}
@@ -329,7 +428,7 @@ True financial freedom is not about becoming fabulously wealthy. It is about hav
           </div>
         </section>
 
-        {/* Sliders Configuration */}
+        {/* Hyperparameters Config Sliders */}
         <section className="flex flex-col gap-4 border-t border-line/40 pt-5">
           <div className="flex items-center gap-2 text-cyan">
             <Cpu size={18} />
@@ -405,7 +504,9 @@ True financial freedom is not about becoming fabulously wealthy. It is about hav
         </section>
       </aside>
 
-      {/* CENTER COLUMN: SVG Loss curves, live training controllers & seed generator */}
+      {/* =======================================================================
+         Center Column: Loss Curve Graph, live controllers and text sampler
+      ======================================================================= */}
       <main className="p-5 flex flex-col gap-6 overflow-y-auto min-h-0 bg-ink/15">
         
         {/* Training Console Card */}
@@ -449,10 +550,10 @@ True financial freedom is not about becoming fabulously wealthy. It is about hav
                 Constrained Top-k sampling is active to ensure highly coherent generation.
               </div>
               <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-5">
-              {/* Curve chart */}
+              {/* Loss Chart curve graph */}
               <LossChart history={lossHistory} />
 
-              {/* Loop Tuning */}
+              {/* Loop Tuning parameters */}
               <div className="flex flex-col justify-between border-l border-line/40 pl-5">
                 <div className="space-y-3 text-xs">
                   <div>
@@ -483,7 +584,7 @@ True financial freedom is not about becoming fabulously wealthy. It is about hav
                   </div>
                 </div>
 
-                {/* Training Actions */}
+                {/* Training Actions triggers */}
                 <div className="mt-4 pt-3 border-t border-line/40 grid grid-cols-2 gap-2">
                   <button
                     onClick={toggleTrainingLoop}

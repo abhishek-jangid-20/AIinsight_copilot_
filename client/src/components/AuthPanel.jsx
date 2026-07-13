@@ -1,3 +1,60 @@
+/**
+ * ---------------------------------------------------------
+ * Folder: components/
+ * Location: client/src/components/
+ * ---------------------------------------------------------
+ *
+ * Folder Purpose:
+ *   The `components` folder houses reusable, self-contained UI modules and layout panels.
+ *   These components structure the presentation layer of the application.
+ *
+ * ---------------------------------------------------------
+ * Component: AuthPanel
+ * ---------------------------------------------------------
+ *
+ * Purpose:
+ *   Manages the user authentication gate, allowing users to register a new account
+ *   or sign in to their existing account to acquire a JWT token.
+ *
+ * Responsibilities:
+ * - Directs the inputs for Name (signup only), Email, and Password.
+ * - Switches view configurations dynamically between "login" and "signup" states.
+ * - Displays client/server authentication error messages.
+ * - Dispatches successful credentials payload to the Redux store to trigger App.jsx entry.
+ *
+ * Props:
+ *   None. (Acts as a full-page route-level layout wrapper when unauthenticated)
+ *
+ * State:
+ * - mode ("login" | "signup"): Controls visual form mode.
+ * - name (string): Controlled component state for registration naming.
+ * - email (string): Controlled component state for email addresses.
+ * - password (string): Controlled component state for passwords.
+ * - showPw (boolean): Toggles the password field type parameter (text vs password).
+ *
+ * Lifecycle / Hooks:
+ * 1. useDispatch: Obtains the Redux dispatcher to commit signedIn payloads upon success.
+ * 2. useMutation: Configures the asynchronous login/signup API queries, dispatching to the store when successful.
+ *
+ * Example Flow:
+ * User enters credentials -> Clicks Sign In
+ * ↓
+ * Form onSubmit triggers
+ * ↓
+ * preventDefault prevents page reload
+ * ↓
+ * mutation.mutate() fires API request (login/signup)
+ * ↓
+ * Server returns response
+ *   - If Success: dispatch(signedIn(payload)) updates Redux store -> App.jsx re-renders dashboard.
+ *   - If Failure: mutation.error sets error state -> Error banner appears in UI.
+ *
+ * Related Files:
+ * - client/src/lib/api.js (Exports backend login/signup API calls)
+ * - client/src/app/store.js (Redux signedIn dispatcher action)
+ * - client/src/App.jsx (Listens to token changes to render workspace vs AuthPanel)
+ */
+
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { BrainCircuit, Eye, EyeOff } from "lucide-react";
@@ -5,16 +62,32 @@ import { useDispatch } from "react-redux";
 import { login, signup } from "../lib/api";
 import { signedIn } from "../app/store";
 
-// BUG-001: Auth form defaults cleared — no hardcoded credentials
-
 export function AuthPanel() {
   const dispatch = useDispatch();
+
+  // Local UI State
   const [mode, setMode] = useState("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
 
+  /**
+   * =============================================================================
+   * REACT CONCEPT: useMutation
+   * =============================================================================
+   * Definition:
+   *   A TanStack Query hook that manages asynchronous server modification actions
+   *   (creates, updates, deletes) and tracks loading/error states.
+   *
+   * Why it is used here:
+   *   Handles the network request to either login or signup. It tracks `isPending`
+   *   so we can show loading spinners and disable submit buttons. On success, it
+   *   dispatches authentication details to the global store.
+   *
+   * References:
+   * - https://tanstack.com/query/v5/docs/framework/react/reference/useMutation
+   */
   const mutation = useMutation({
     mutationFn: () => (mode === "login" ? login(email, password) : signup(name, email, password)),
     onSuccess: (payload) => dispatch(signedIn(payload)),
@@ -24,7 +97,7 @@ export function AuthPanel() {
     <main className="relative min-h-screen flex items-center justify-center px-5 overflow-hidden"
       style={{ background: "linear-gradient(165deg, #060a12 0%, #07091a 35%, #080d1a 60%, #060a14 100%)" }}>
 
-      {/* Background glow orbs */}
+      {/* Aesthetic Background Glow Orbs */}
       <div className="pointer-events-none fixed" style={{
         top: "-120px", left: "-120px",
         width: "500px", height: "500px",
@@ -50,11 +123,27 @@ export function AuthPanel() {
         opacity: 0.5
       }} />
 
-      {/* Card */}
+      {/* =======================================================================
+         Authentication Form Card
+         Employs onSubmit with preventDefault to manage submissions via React.
+      ======================================================================= */}
       <form
         className="relative z-10 w-full"
         style={{ maxWidth: "420px" }}
         onSubmit={(e) => {
+          /**
+           * ===================================================================
+           * REACT CONCEPT: Form onSubmit & preventDefault
+           * ===================================================================
+           * Why?
+           *   Standard HTML form submissions attempt to reload the browser window
+           *   to send variables to the URL/server. `preventDefault()` stops this
+           *   default browser reload, allowing React to handle authentication
+           *   asynchronously using Javascript API calls.
+           *
+           * References:
+           * - https://react.dev/reference/react-dom/components/input#controlling-an-input-with-a-state-variable
+           */
           e.preventDefault();
           mutation.mutate();
         }}
@@ -67,7 +156,7 @@ export function AuthPanel() {
             boxShadow: "0 8px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)"
           }}>
 
-          {/* Logo area */}
+          {/* Logo Title section */}
           <div className="mb-8 flex flex-col items-center gap-3 text-center">
             <div className="grid h-16 w-16 place-items-center rounded-2xl"
               style={{
@@ -93,7 +182,7 @@ export function AuthPanel() {
             </div>
           </div>
 
-          {/* Tab switcher */}
+          {/* Mode Switch Tabs (Login vs Sign Up) */}
           <div className="mb-6 grid grid-cols-2 gap-1 p-1 rounded-xl"
             style={{ background: "rgba(6,10,18,0.7)", border: "1px solid rgba(29,42,66,0.6)" }}>
             {["login", "signup"].map((item) => (
@@ -116,12 +205,18 @@ export function AuthPanel() {
             ))}
           </div>
 
-          {/* Fields */}
+          {/* Input Fields Container */}
           <div className="flex flex-col gap-1">
+            {/* =================================================================
+               Conditional Rendering
+               The Name field is only rendered if we are in signup mode.
+            ================================================================= */}
             {mode === "signup" && (
               <Field label="Name" value={name} onChange={setName} placeholder="Your name" />
             )}
+            
             <Field label="Email" value={email} onChange={setEmail} placeholder="you@example.com" type="email" />
+            
             <Field
               label="Password"
               type={showPw ? "text" : "password"}
@@ -143,7 +238,7 @@ export function AuthPanel() {
             />
           </div>
 
-          {/* Error */}
+          {/* Server Error Alert Banner */}
           {mutation.error && (
             <div className="mt-4 px-3 py-2.5 rounded-xl text-xs"
               style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.22)", color: "#f87171" }}>
@@ -151,7 +246,7 @@ export function AuthPanel() {
             </div>
           )}
 
-          {/* Submit */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={mutation.isPending}
@@ -179,7 +274,7 @@ export function AuthPanel() {
             )}
           </button>
 
-          {/* Footer hint */}
+          {/* Footer Subtext */}
           <p className="mt-5 text-center text-[11px]" style={{ color: "#2d3748" }}>
             Secured with JWT · Repository data stays local
           </p>
@@ -189,6 +284,25 @@ export function AuthPanel() {
   );
 }
 
+// =============================================================================
+// Component: Field
+// =============================================================================
+/**
+ * Renders a standardized, customizable input form control.
+ *
+ * Why React composition is useful:
+ *   Instead of copying style settings and layout logic for Name, Email, and
+ *   Password inputs, we compose a single reusable `<Field />` control to ensure design
+ *   consistency.
+ *
+ * Props:
+ * - label: Text rendering above the input box (e.g. "Password").
+ * - value: Value binding mapping to parent controlled state.
+ * - onChange: Callback firing to modify parent states when typed text changes.
+ * - type: HTML input type (text, email, password, etc.).
+ * - placeholder: Temporary placeholder string.
+ * - suffix: Optional React element (e.g., eye toggle icon) positioned inside the right end.
+ */
 function Field({
   label,
   value,
@@ -203,6 +317,22 @@ function Field({
         {label}
       </span>
       <div className="relative">
+        {/**
+         * =====================================================================
+         * REACT CONCEPT: Controlled Components
+         * =====================================================================
+         * Definition:
+         *   An input element whose value is fully controlled by React local state.
+         *   The local state acts as the "single source of truth".
+         *
+         * How it works:
+         *   - `value={value}` forces the input text to match current state.
+         *   - `onChange={...}` captures keystrokes and updates parent state,
+         *     causing a re-render to update the display.
+         *
+         * References:
+         * - https://react.dev/learn/sharing-state-between-components#controlled-and-uncontrolled-components
+         */}
         <input
           className="h-11 w-full rounded-xl px-3 text-sm transition-all"
           style={{

@@ -1,5 +1,5 @@
 export default {
-  content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   safelist: [
     // All custom color/opacity combos used in JSX
     "bg-cyan/5", "bg-cyan/8", "bg-cyan/10", "bg-cyan/12", "bg-cyan/15", "bg-cyan/20", "bg-cyan/25",

@@ -1,3 +1,24 @@
+"""
+---------------------------------------------------------
+File: main.py
+Location: services/minigpt-service/main.py
+---------------------------------------------------------
+
+Purpose:
+  FastAPI service exposing API routes to configure, train, and generate text
+  from a custom toy GPT model in real-time.
+
+Responsibilities:
+- Implements multi-tenant session isolation so multiple users can train separate models.
+- Parses dataset corpuses (Shakespeare, Finance, WikiText).
+- Exposes routes to initialize models, run backpropagation steps, and sample generated text.
+- Serves cached WikiText datasets.
+
+Related Files:
+- server/src/routes/minigpt.js (Gateway proxy router)
+- services/minigpt-service/model.py (GPT model class)
+"""
+
 from __future__ import annotations
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
@@ -12,8 +33,7 @@ app = FastAPI(title="CodeInsight MiniGPT Service", version="0.1.0")
 
 import os
 
-# LOGIC-005: Per-user session isolation — keyed by user_id extracted from request header
-# Each user gets their own LabSession so one user's re-init doesn't destroy another's training state.
+# Multi-tenant state: Keyed by user_id to ensure separate training scopes
 _sessions: dict[str, LabSession] = {}
 
 # Try to load custom sample text, otherwise fallback to hardcoded string
@@ -61,6 +81,9 @@ def health():
 
 @app.post("/lab/init")
 def init_lab(req: InitRequest, request: Request):
+    """
+    Spawns a new model architecture instance for the requesting user, resetting their logs.
+    """
     user_id = _get_user_id(request)
     text = req.text if (req.text and req.text.strip()) else DEFAULT_CORPUS
 
@@ -91,6 +114,9 @@ def init_lab(req: InitRequest, request: Request):
 
 @app.post("/lab/train-step")
 def train_step(req: TrainRequest, request: Request):
+    """
+    Executes a configured number of backpropagation training iterations on the user's model.
+    """
     user_id = _get_user_id(request)
     session = _sessions.get(user_id)
     if session is None:
@@ -109,6 +135,9 @@ def train_step(req: TrainRequest, request: Request):
 
 @app.post("/lab/generate")
 def generate_text(req: GenerateRequest, request: Request):
+    """
+    Samples text autoregressively from the user's model weights.
+    """
     user_id = _get_user_id(request)
     session = _sessions.get(user_id)
     if session is None:
@@ -128,6 +157,9 @@ def generate_text(req: GenerateRequest, request: Request):
 
 @app.get("/lab/state")
 def get_state(request: Request):
+    """
+    Returns the user's model parameters, step counts, and historical training logs.
+    """
     user_id = _get_user_id(request)
     session = _sessions.get(user_id)
     if session is None:
@@ -150,6 +182,9 @@ def get_state(request: Request):
 
 @app.get("/lab/wikitext")
 def get_wikitext():
+    """
+    Loads and returns the public Wikitext corpus file.
+    """
     path = os.path.join(os.path.dirname(__file__), "wikitext_dataset.txt")
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
